@@ -1,0 +1,29 @@
+{
+  "name": "skill-admin",
+  "version": "1.2.0",
+  "description": "Multi-surface plugin and skill administration: route, audit, install, repair, write, orchestrate, bootstrap. Works on Claude Code CLI and Claude Desktop / Cowork Surface.",
+  "author": {
+    "name": "SPMechanic",
+    "email": "spmechanic@users.noreply.github.com"
+  },
+  "license": "MIT",
+  "keywords": ["plugin-management", "skill-administration", "routing", "marketplace", "orchestration", "cowork", "desktop", "multi-surface"],
+  "homepage": "https://github.com/SPMechanic/skill-admin",
+  "repository": "https://github.com/SPMechanic/skill-admin",
+  "skills": [
+    "./skills/intake",
+    "./skills/marketplace-bootstrapper",
+    "./skills/marketplace-optimizer",
+    "./skills/plugin-doctor",
+    "./skills/plugin-feedback",
+    "./skills/plugin-manager",
+    "./skills/plugin-router",
+    "./skills/project-atlas",
+    "./skills/skill-orchestrator",
+    "./skills/steering-writer"
+  ],
+  "workflows": [
+    "./workflows/skill-admin.bootstrap-project.workflow.js",
+    "./workflows/skill-admin.marketplace-scout.workflow.js"
+  ]
+}

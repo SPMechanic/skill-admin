@@ -1,0 +1,25 @@
+# Local-only and non-shipped directories
+.claude/
+docs/
+tests/
+examples/
+scripts/
+references/
+
+# Python build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.pytest_cache/
+.mypy_cache/
+
+# OS / editor artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/

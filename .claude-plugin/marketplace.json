@@ -1,0 +1,38 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "skill-admin",
+  "owner": {
+    "name": "SPMechanic",
+    "url": "https://github.com/SPMechanic"
+  },
+  "metadata": {
+    "description": "Multi-surface plugin and skill administration: route, audit, install, repair, write, orchestrate, bootstrap. Works on Claude Code CLI and Claude Desktop / Cowork Surface.",
+    "version": "1.2.0"
+  },
+  "plugins": [
+    {
+      "name": "skill-admin",
+      "description": "Multi-surface plugin and skill administration: route, audit, install, repair, write, orchestrate, bootstrap. Works on Claude Code CLI and Claude Desktop / Cowork Surface.",
+      "version": "1.2.0",
+      "author": {
+        "name": "SPMechanic",
+        "url": "https://github.com/SPMechanic"
+      },
+      "source": ".",
+      "category": "productivity",
+      "homepage": "https://github.com/SPMechanic/skill-admin",
+      "repository": "https://github.com/SPMechanic/skill-admin",
+      "license": "MIT",
+      "tags": [
+        "plugin-management",
+        "skill-administration",
+        "routing",
+        "marketplace",
+        "orchestration",
+        "cowork",
+        "desktop",
+        "multi-surface"
+      ]
+    }
+  ]
+}
