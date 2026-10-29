@@ -3,8 +3,6 @@
 docs/
 tests/
 examples/
-scripts/
-references/
 
 # Python build artifacts
 __pycache__/
