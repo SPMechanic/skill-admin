@@ -1286,10 +1286,12 @@ Agent-loadable summary of `catalog.md`. Regenerate with `refresh_catalog.py`.
 - `ux-research` — Plan and execute user research including research planning, recruiting, interview design, qualitative synthesis, and translating findings into product decisions. Use this skill whenever the user wants to plan user resear
 - `vendor-evaluation` — Evaluate, select, and contract with vendors and SaaS tools. Use this skill when comparing alternatives, running an RFP, scoring vendors against criteria, negotiating contracts, planning a switch, or assessing a vendor's 
 - `vertical-site-conventions` — Compose pages and sites that read as their vertical: ecommerce-catalog storefronts that look like storefronts, hospitality-food sites that look like restaurants, b2b-manufacturer sites that look industrial. Use this skil
-- `marketplace-bootstrapper` — Bootstrap a fresh Claude Code environment with recommended marketplaces, plugins, and configuration. Use when the user says "set up a new machine", "bootstrap my environment", "fresh install of Claude Code", "set up my d
-- `marketplace-optimizer` — Audit and score your installed Claude Code plugins and marketplaces. Use when the user asks to "optimize my marketplace", "check my plugins", "which plugins should I keep/remove", "rate my plugins", "clean up my marketpl
+- `intake` — Step 0 Intent Articulation. Consumes one raw user prompt and produces a gated plan table (rows = steps; columns = action, capability, reason, evidence, coordinates, inferred-from) before any routing or execution. Use whe
+- `marketplace-bootstrapper` — Bootstrap a fresh Claude Code environment with recommended marketplaces, plugins, and configuration. Works on Claude Code CLI and Claude Desktop / Cowork Surface via direct file operations. Use when the user says "set up
+- `marketplace-optimizer` — Audit and score your installed Claude Code plugins and marketplaces across all surfaces (Claude Code CLI, Claude Desktop Cowork/Code, and 3P gateway variants). Use when the user asks to "optimize my marketplace", "check 
 - `plugin-doctor` — Diagnose and repair broken Claude Code plugins, stale manifests, orphaned skills, and invalid plugin.json files. Use when the user says "fix my plugins", "this plugin is broken", "repair my setup", "diagnose plugin error
-- `plugin-manager` — Install, remove, and upgrade Claude Code plugins and marketplaces. Use when the user says "install this plugin", "remove X", "uninstall Y", "upgrade Z", "add a marketplace", or "manage my plugins". This skill performs pa
+- `plugin-feedback` — Capture routing misses, bad recommendations, and skill feedback to improve skill-admin's routing quality. Use when the user says "log this miss", "report bad routing", "skill-admin missed", "this recommendation was wrong
+- `plugin-manager` — Install, remove, upgrade, and enable/disable Claude Code plugins and marketplaces. Works on Claude Code CLI and Claude Desktop / Cowork Surface via direct file operations. Use when the user says "install this plugin", "r
 - `plugin-router` — Route user requests to the correct plugin, skill, command, or agent from the installed marketplace catalog. Use when the user asks to perform a development task — writing code, reviewing, testing, debugging, planning, re
 - `project-atlas` — Generate a project atlas map that connects any project's AI-steering files (CLAUDE.md, AGENTS.md) and prompt context to a curated plugin/skill stack. Use when the user asks to "analyze my project", "what plugins do I nee
 - `skill-orchestrator` — Coordinate multiple Claude Code skills for complex tasks that require more than one skill. Use when the user says "run all my skills", "coordinate the pipeline", "run the full workflow", "orchestrate my setup", or when a
@@ -1319,4 +1321,4 @@ Agent-loadable summary of `catalog.md`. Regenerate with `refresh_catalog.py`.
 - `review-claudemd` — Review recent conversations to find improvements for CLAUDE.md files.
 - `version-check` — Recommend which Claude Code version to run, or whether to update. Use when asked which Claude Code version is best/safe, whether to update now, whether a recent release is buggy, or what changed since the installed versi
 
-_1315 unique skills in catalog_
+_1317 unique skills in catalog_

@@ -300,15 +300,31 @@ If no `CLAUDE.md` exists, suggest creating one once you understand the project.
 ## Catalog
 
 The full inventory of installed plugins, skills, commands, and agents lives in
-`skills/plugin-router/references/catalog.md`. Read it when:
-- The routing tables don't cover the request.
-- The user asks what capabilities exist.
-- You need to check if a specific capability is installed.
+a SQLite runtime cache at `~/.skill-admin/plugin-router/catalog.sqlite`. Query
+it via the CLI instead of reading files:
 
-To regenerate after installing/removing plugins:
+```bash
+# Route a requirement to the best installed capability
+uv run python skills/plugin-router/scripts/recommend.py "Build a secure .NET web API"
+
+# Search by domain tag
+uv run python skills/plugin-router/scripts/recommend.py search --tag security
+
+# Check staleness (exit 0 = fresh, 1 = stale)
+uv run python skills/plugin-router/scripts/refresh_catalog.py --check
+
+# Force full rebuild
+uv run python skills/plugin-router/scripts/refresh_catalog.py --force
 ```
-uv run python skills/plugin-router/scripts/refresh_catalog.py
-```
+
+`recommend.py` auto-refreshes the catalog when it detects staleness (any file
+under `~/.claude/plugins/marketplaces/` newer than the DB). The generated
+markdown files (`catalog.md`, `catalog-index.md`) are human-readable artifacts
+only — do not use them as the runtime source.
+
+Human-readable artifacts (regenerated on refresh):
+- `skills/plugin-router/references/catalog.md`
+- `skills/plugin-router/references/catalog-index.md`
 
 ## Brownfield: steering files and project context
 

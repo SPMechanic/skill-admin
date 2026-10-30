@@ -68,7 +68,7 @@ if (!context) {
 phase('Recommend skills')
 log('Ranking installed skills against the project context')
 const recs = await agent(
-  `Act as marketplace-optimizer. Read skills/marketplace-optimizer/SKILL.md and skills/plugin-router/references/catalog-index.md. Given the project context below, recommend the best installed skills and flag coverage gaps. Do not install anything.\n\nProject context:\n${JSON.stringify(context, null, 2)}`,
+  `Act as marketplace-optimizer. Read skills/marketplace-optimizer/SKILL.md and skills/plugin-router/references/catalog-index.md (a generated artifact; the runtime source is ~/.skill-admin/plugin-router/catalog.sqlite). Given the project context below, recommend the best installed skills and flag coverage gaps. Do not install anything.\n\nProject context:\n${JSON.stringify(context, null, 2)}`,
   { phase: 'Recommend skills', schema: SKILL_RECOMMENDATIONS_SCHEMA }
 )
 if (!recs) {

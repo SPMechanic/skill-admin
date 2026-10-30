@@ -1,0 +1,9 @@
+.git/
+docs/
+examples/
+tests/evals/
+.claude/
+__pycache__/
+*.pyc
+*.sqlite
+*.db

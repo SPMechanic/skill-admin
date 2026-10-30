@@ -1,23 +1,39 @@
 #!/usr/bin/env python3
 """
-Refresh ~/.claude/skills/plugin-router/references/catalog.md
-from the installed marketplaces under ~/.claude/plugins/marketplaces/.
+Refresh the plugin-router catalog from the installed marketplaces under
+~/.claude/plugins/marketplaces/.
+
+Writes:
+  - SQLite DB at ~/.skill-admin/plugin-router/catalog.sqlite (runtime source
+    of truth, never shipped in the repo).
+  - Markdown files skills/plugin-router/references/catalog.md and
+    catalog-index.md (human-readable, git-diffable artifacts regenerated
+    from the same collected data).
 
 Usage:
-    uv run ~/.claude/skills/plugin-router/scripts/refresh_catalog.py
+    uv run skills/plugin-router/scripts/refresh_catalog.py            # refresh only if stale
+    uv run skills/plugin-router/scripts/refresh_catalog.py --force    # always rebuild
+    uv run skills/plugin-router/scripts/refresh_catalog.py --check    # report fresh/stale, exit 0/1
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
-MARKETPLACES_DIR = Path.home() / ".claude" / "plugins" / "marketplaces"
 SCRIPT_DIR = Path(__file__).parent.resolve()
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+import catalog_db
+
+MARKETPLACES_DIR = Path.home() / ".claude" / "plugins" / "marketplaces"
 OUTPUT_FILE = SCRIPT_DIR.parent / "references" / "catalog.md"
 INDEX_FILE = SCRIPT_DIR.parent / "references" / "catalog-index.md"
 
@@ -383,17 +399,138 @@ def render_index(marketplaces: dict[str, dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def main() -> None:
+def count_capabilities(marketplaces: dict[str, dict[str, Any]]) -> int:
+    total = 0
+    for mp_data in marketplaces.values():
+        total += len(mp_data.get("skills", []))
+        for plugin in mp_data.get("plugins", []):
+            total += len(plugin.get("skills", []))
+            total += len(plugin.get("commands", []))
+            total += len(plugin.get("agents", []))
+    return total
+
+
+def rebuild_db(marketplaces: dict[str, dict[str, Any]], source_mtime: float | None) -> None:
+    """Write the SQLite catalog from collected marketplaces (full rebuild)."""
+    # Delete the old DB file so every refresh starts from a clean slate.
+    db_path = catalog_db.CATALOG_DB
+    if db_path.exists():
+        db_path.unlink()
+
+    conn = catalog_db.get_connection(db_path)
+    try:
+        for mp_name, mp_data in marketplaces.items():
+            info = mp_data.get("info", {})
+            mp_desc = info.get("description", "")
+            catalog_db.write_marketplace(conn, mp_name, mp_desc)
+
+            for skill in mp_data.get("skills", []):
+                catalog_db.write_capability(
+                    conn,
+                    marketplace=mp_name,
+                    plugin_id=None,
+                    type="skill",
+                    name=skill.get("name", ""),
+                    description=skill.get("description", ""),
+                    domains=",".join(catalog_db.match_domains(skill.get("description", ""))),
+                )
+
+            for plugin in mp_data.get("plugins", []):
+                plugin_id = catalog_db.write_plugin(
+                    conn,
+                    marketplace=mp_name,
+                    name=plugin.get("name", ""),
+                    description=plugin.get("description", ""),
+                )
+
+                for skill in plugin.get("skills", []):
+                    catalog_db.write_capability(
+                        conn,
+                        marketplace=mp_name,
+                        plugin_id=plugin_id,
+                        type="skill",
+                        name=skill.get("name", ""),
+                        description=skill.get("description", ""),
+                        domains=",".join(catalog_db.match_domains(skill.get("description", ""))),
+                    )
+
+                for cmd in plugin.get("commands", []):
+                    catalog_db.write_capability(
+                        conn,
+                        marketplace=mp_name,
+                        plugin_id=plugin_id,
+                        type="command",
+                        name=cmd.get("name", ""),
+                        description=cmd.get("description", ""),
+                        domains=",".join(catalog_db.match_domains(cmd.get("description", ""))),
+                    )
+
+                for agent in plugin.get("agents", []):
+                    catalog_db.write_capability(
+                        conn,
+                        marketplace=mp_name,
+                        plugin_id=plugin_id,
+                        type="agent",
+                        name=agent.get("name", ""),
+                        description=agent.get("description", ""),
+                        domains=",".join(catalog_db.match_domains(agent.get("description", ""))),
+                    )
+
+        catalog_db.finalize_refresh(conn, source_mtime or 0.0)
+    finally:
+        conn.close()
+
+
+def do_refresh(force: bool = False) -> bool:
+    """Rebuild the catalog. Returns True if a refresh happened."""
+    if not force and not catalog_db.is_stale():
+        print("Catalog DB is fresh; nothing to do. Use --force to rebuild.")
+        return False
+
     marketplaces = collect_marketplaces()
+    source_mtime = catalog_db.newest_source_mtime()
+
+    rebuild_db(marketplaces, source_mtime)
+
     output = render_catalog(marketplaces)
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_FILE.write_text(output, encoding="utf-8")
-    print(f"Wrote {OUTPUT_FILE}")
-    print(f"  Marketplaces: {len(marketplaces)}")
 
     index = render_index(marketplaces)
     INDEX_FILE.write_text(index + "\n", encoding="utf-8")
+
+    n_caps = count_capabilities(marketplaces)
+    print(f"Wrote {catalog_db.CATALOG_DB}")
+    print(f"  Marketplaces: {len(marketplaces)}")
+    print(f"  Capabilities: {n_caps}")
+    print(f"Wrote {OUTPUT_FILE}")
     print(f"Wrote {INDEX_FILE}")
+    return True
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Refresh the plugin-router catalog (SQLite + markdown)."
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Rebuild even if the catalog DB is fresh.",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Report fresh/stale and exit (0 = fresh, 1 = stale).",
+    )
+    args = parser.parse_args()
+
+    if args.check:
+        stale = catalog_db.is_stale()
+        print("stale" if stale else "fresh")
+        sys.exit(1 if stale else 0)
+
+    refreshed = do_refresh(force=args.force)
+    sys.exit(0 if refreshed or not catalog_db.is_stale() else 1)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 {
   "name": "skill-admin",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "Multi-surface plugin and skill administration: route, audit, install, repair, write, orchestrate, bootstrap. Works on Claude Code CLI and Claude Desktop / Cowork Surface.",
   "author": {
     "name": "SPMechanic",

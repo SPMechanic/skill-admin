@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -33,10 +34,14 @@ if sys.platform == "win32":
 
 # ── Paths ────────────────────────────────────────────────────────────────────
 
-SKILL_ROOT = Path(__file__).parent.parent
-CATALOG_FILE = SKILL_ROOT / "references" / "catalog.md"
+SCRIPT_DIR = Path(__file__).parent
+SKILL_ROOT = SCRIPT_DIR.parent
 WISHLIST_FILE = SKILL_ROOT / "references" / "marketplace-wishlist.md"
 MARKETPLACES_DIR = Path.home() / ".claude" / "plugins" / "marketplaces"
+REFRESH_SCRIPT = SCRIPT_DIR / "refresh_catalog.py"
+
+sys.path.insert(0, str(SCRIPT_DIR))
+import catalog_db  # noqa: E402
 
 # ── Domain taxonomies ───────────────────────────────────────────────────────
 
@@ -289,6 +294,57 @@ def score_capability(cap: Capability, project_domains: list[str], project_type: 
     return int(min(score, 100))
 
 
+# ── DB-backed catalog loading ─────────────────────────────────────────────────
+
+def ensure_catalog_fresh() -> None:
+    """Check staleness; auto-refresh if the DB is older than the marketplace source."""
+    if not catalog_db.is_stale():
+        return
+    try:
+        result = subprocess.run(
+            [sys.executable, str(REFRESH_SCRIPT)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode != 0:
+            print(
+                f"warning: catalog refresh failed (exit {result.returncode}), using existing data",
+                file=sys.stderr,
+            )
+    except subprocess.TimeoutExpired:
+        print("warning: catalog refresh timed out, using existing data", file=sys.stderr)
+    except Exception as e:
+        print(f"warning: catalog refresh error: {e}, using existing data", file=sys.stderr)
+
+
+def load_capabilities() -> list[Capability]:
+    """Load capabilities from the SQLite runtime catalog."""
+    ensure_catalog_fresh()
+    try:
+        conn = catalog_db.get_connection()
+        rows = catalog_db.query_capabilities(conn, limit=10000)
+        conn.close()
+    except Exception as e:
+        print(f"warning: could not query catalog DB: {e}", file=sys.stderr)
+        return []
+
+    capabilities = []
+    for row in rows:
+        domains = match_domains(f"{row['name']} {row['description']}")
+        capabilities.append(
+            Capability(
+                marketplace=row["marketplace"],
+                plugin=None,  # plugin name is in the DB but not used for scoring
+                type=row["type"],
+                name=row["name"],
+                description=row["description"],
+                domains=domains,
+            )
+        )
+    return capabilities
+
+
 # ── Reputation lookup ───────────────────────────────────────────────────────
 
 _REPUTATION_CACHE: dict[str, int] = {}
@@ -311,49 +367,10 @@ def get_marketplace_reputation(marketplace: str) -> int:
     return rep
 
 
-# ── Catalog parsing ─────────────────────────────────────────────────────────
+# ── Catalog loading (delegated to catalog_db) ────────────────────────────────
 
 def parse_catalog() -> list[Capability]:
-    if not CATALOG_FILE.exists():
-        return []
-    text = CATALOG_FILE.read_text(encoding="utf-8")
-    capabilities = []
-    current_mp = ""
-    current_plugin = None
-
-    for line in text.splitlines():
-        mp_match = re.match(r"^## Marketplace: `([^`]+)`", line)
-        if mp_match:
-            current_mp = mp_match.group(1)
-            current_plugin = None
-            continue
-
-        plugin_match = re.match(r"^### Plugin: `([^`]+)`", line)
-        if plugin_match:
-            current_plugin = plugin_match.group(1)
-            continue
-
-        cap_match = re.match(
-            r"^- \*\*(Skill|Command|Agent)\*\* `([^`]+)` — (.*?) — \*trigger\*:",
-            line,
-        )
-        if cap_match:
-            cap_type = cap_match.group(1).lower()
-            name = cap_match.group(2)
-            desc = cap_match.group(3)
-            domains = match_domains(f"{name} {desc}")
-            capabilities.append(
-                Capability(
-                    marketplace=current_mp,
-                    plugin=current_plugin,
-                    type=cap_type,
-                    name=name,
-                    description=desc,
-                    domains=domains,
-                )
-            )
-
-    return capabilities
+    return load_capabilities()
 
 
 # ── Marketplace recommendation ──────────────────────────────────────────────

@@ -24,10 +24,13 @@ import re
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-CATALOG_PATH = REPO_ROOT / "skills" / "plugin-router" / "references" / "catalog.md"
+SCRIPT_DIR = Path(__file__).parent.resolve()
+REPO_ROOT = SCRIPT_DIR.parent.parent.parent
 ROUTER_SKILL = REPO_ROOT / "skills" / "plugin-router" / "SKILL.md"
 WORKFLOWS_DIR = REPO_ROOT / ".claude" / "workflows"
+
+sys.path.insert(0, str(SCRIPT_DIR))
+import catalog_db  # noqa: E402
 
 
 def parse_table_targets(text: str) -> set[str]:
@@ -61,37 +64,36 @@ def workflow_names() -> set[str]:
 
 
 def catalog_skill_names() -> set[str]:
-    text = CATALOG_PATH.read_text(encoding="utf-8")
-    return {
-        m.group(1).strip()
-        for m in re.finditer(r"^- \*\*Skill\*\* `([^`]+)`", text, re.MULTILINE)
-    }
+    """Return skill names from the runtime DB."""
+    try:
+        conn = catalog_db.get_connection()
+        rows = catalog_db.query_capabilities(conn, type="skill", limit=10000)
+        conn.close()
+        return {row["name"] for row in rows}
+    except Exception:
+        return set()
 
 
 def all_catalog_names() -> set[str]:
-    text = CATALOG_PATH.read_text(encoding="utf-8")
+    """Return all catalog names from the runtime DB (skills, agents, commands, plugins, marketplaces)."""
     names: set[str] = set()
-    # list entries: - **Skill** `name` — / **Command** `/name` — / **Agent** `name`
-    for m in re.finditer(
-        r"^- \*\*(?:Skill|Agent)\*\* `([^`]+)`", text, re.MULTILINE
-    ):
-        names.add(m.group(1).strip())
-    for m in re.finditer(
-        r"^- \*\*Command\*\* `/([^`]+)`", text, re.MULTILINE
-    ):
-        names.add(m.group(1).strip())
-    # plugin headings: ### Plugin: `name`
-    for m in re.finditer(r"^### Plugin: `([^`]+)`", text, re.MULTILINE):
-        names.add(m.group(1).strip())
-    # marketplace headings: ## Marketplace: `name`
-    for m in re.finditer(r"^## Marketplace: `([^`]+)`", text, re.MULTILINE):
-        names.add(m.group(1).strip())
+    try:
+        conn = catalog_db.get_connection()
+        for row in catalog_db.query_capabilities(conn, limit=10000):
+            names.add(row["name"])
+        for row in conn.execute("SELECT name FROM marketplaces"):
+            names.add(row[0])
+        for row in conn.execute("SELECT name FROM plugins"):
+            names.add(row[0])
+        conn.close()
+    except Exception:
+        pass
     return names
 
 
 def main() -> int:
-    if not CATALOG_PATH.exists():
-        print(f"error: catalog not found: {CATALOG_PATH}", file=sys.stderr)
+    if not catalog_db.get_db_mtime():
+        print("error: catalog DB not found — run refresh_catalog.py first", file=sys.stderr)
         return 1
 
     router_text = ROUTER_SKILL.read_text(encoding="utf-8")
