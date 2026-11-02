@@ -380,6 +380,21 @@ When a user's project needs capabilities not in the current catalog, read
 `skills/plugin-router/references/marketplace-wishlist.md` and recommend the closest matching
 marketplaces to install.
 
+## Completion work
+
+Requests to finish a slice end to end, or to check whether something is really
+done, belong to `skill-admin:force-complete-slice`, not to a routing table row.
+It discovers the project's own gates, writes a completion contract, and reports
+status with provenance (`PASS`, `PARTIAL`, `FAIL`, `BLOCKED`, `NOT RUN`,
+`NOT APPLICABLE`) rather than declaring success.
+
+It is deliberately absent from the Domain Routing Tables: those list installed
+catalog capabilities, and `check_routing_drift.py` requires every table target to
+exist in the installed catalog. A first-party skill is not catalog content, so it
+is named here instead.
+
+Do not answer "is this complete?" from the routing tables. Route it.
+
 ## Surfaces
 
 | Surface | Behavior |

@@ -26,6 +26,7 @@ Multi-surface plugin and skill administration. Works on Claude Code CLI and Clau
 | `steering-writer` | Executor | Create/edit steering files — pauses for confirmation |
 | `skill-orchestrator` | Executor | Sequence skills with safety gates — never routes or installs directly |
 | `marketplace-bootstrapper` | Executor | Fresh-machine setup with curated install profiles |
+| `force-complete-slice` | Executor | Drive one slice to an evidence-backed completion state — discovers the project's own gates, writes a completion contract, escalates through research and strong-model delegation when blocked, reports `PASS` / `PARTIAL` / `BLOCKED` / `NOT RUN` with provenance |
 
 ## Surface compatibility
 

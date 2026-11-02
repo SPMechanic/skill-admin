@@ -25,7 +25,8 @@ skill-admin/
 │   ├── plugin-feedback/             # Feedback capture for routing misses
 │   ├── steering-writer/             # Steering file creation/editing
 │   ├── skill-orchestrator/          # Multi-skill sequencing with safety gates
-│   └── marketplace-bootstrapper/    # Fresh-machine setup
+│   ├── marketplace-bootstrapper/    # Fresh-machine setup
+│   └── force-complete-slice/        # Evidence-backed slice completion (discover → contract → verify → report)
 ├── scripts/                         # Utility scripts (not shipped as skills)
 │   └── catalog_refresh.py           # Catalog refresh logic
 ├── tests/                           # Deterministic unit tests + behavior evals

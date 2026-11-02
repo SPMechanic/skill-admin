@@ -11,10 +11,4 @@ COPY . .
 
 RUN pip install --no-cache-dir pytest
 
-CMD ["pytest", \
-     "tests/test_catalog_db.py", \
-     "tests/test_recommend_engine.py", \
-     "tests/test_catalog_freshness.py", \
-     "tests/test_plugin_manifest.py", \
-     "tests/test_repo_structure.py", \
-     "-q"]
+CMD ["pytest", "tests/", "-q"]
