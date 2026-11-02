@@ -31,6 +31,7 @@ For each slice the plan needs, classify from artifacts only:
 | **Complete** | `acceptance.tsv` exists and every row is `PASS` | Skip. Reuse; do not re-verify here. The verification skill re-verifies anything it imports for its own report. |
 | **Partial** | `acceptance.tsv` exists with any row not `PASS` | Queue as *complete the slice* — never rebuild. The skill seeds from the existing contract. |
 | **Missing** | No `acceptance.tsv` | Queue as a new slice; the skill derives a fresh contract. |
+| **Hollow** | Presentation exists (mockup, UI shell, prototype) but no `acceptance.tsv` and no backend/contract surface behind it | **Design-first, never implement-first.** Queue into a contract wave (below) before any implementation wave. |
 | **Blocked** | `status.json` or `baseline.json` lists unmet `blocked` prerequisites | Do not queue yet. The unmet prerequisites are queued first; this slice re-classifies when they complete. |
 
 Fuzzy matching is forbidden: "is the student module implemented?" is not a
@@ -70,6 +71,51 @@ Build the DAG from the `blocked` lists and classification, then:
    fan out; the rest run sequentially in Mode C.
 
 Cycles mean a plan error: report and stop (the existing error-handling row).
+
+## Hollow slices and the contract wave
+
+A **Hollow** slice is one where presentation exists but the domain does not —
+a mockup, UI shell, or prototype with no `acceptance.tsv` and no backend
+surface behind it. It is the most dangerous class to schedule naively: an
+implement-first agent will wire the UI to *imagined* ports, and the module
+lands out of sync with the architecture as a whole.
+
+Hollow slices enter a **contract wave** that precedes any implementation wave
+for them. A contract wave is design-only: define the slice's domain ownership,
+required ports, events, and read models as *contracts* — what the dashboard
+will need from `inpatient`, `scheduling`, `facility calendar` — and expose
+every unresolved decision as an explicit `BLOCKED` item (metric formulas, bed
+source) rather than filling it with a default. Design top-down; implement
+bottom-up:
+
+1. **Contract wave (top-down design).** For each Hollow slice, produce its
+   contract: ports it requires, events it publishes/consumes, read models. In
+   DDD terms this is the published language and its ACLs — defined before the
+   lower modules that will eventually implement them, so those modules are
+   built to satisfy the contract rather than the UI bending to whatever got
+   built. No implementation, no scaffolding, no mock backends that pretend the
+   port exists. Unresolved business decisions become `BLOCKED` rows owned by
+   the user.
+2. **Ladder reconciliation.** Trace the slice's declared dependencies and the
+   compiled module graph; reconcile them. The first missing prerequisite on
+   the ladder defines the readiness condition for the slice. Lower modules
+   implement *toward* the contracts from step 1.
+3. **Implementation waves (bottom-up build).** The usual DAG waves. The Hollow
+   slice implements last, against ports that now exist.
+
+Two rules bind every contract wave:
+
+- **Guessing is a defect.** If a design agent fills an unresolved decision with
+  a plausible default (a metric formula, an enum value, a bed-source shape),
+  the contract is wrong even if the code compiles. The review of a contract
+  wave checks for invented decisions the same way an implementation review
+  checks for invented evidence.
+- **Parallel design passes over the same slice are sequential on decision
+  points.** Independent design agents may explore different surfaces (domain
+  shape, backend contracts, API boundary) simultaneously, but whenever two
+  passes would resolve the same decision, the passes must be merged or
+  sequenced — two agents inventing the same enum independently is a conflict,
+  not parallelism.
 
 ## The fifth rubric axis
 
