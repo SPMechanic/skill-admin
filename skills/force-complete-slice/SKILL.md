@@ -46,8 +46,14 @@ This skill writes to the target project only. It never edits plugin state under
 |---|---|
 | Claude Code CLI | Full path: `Bash` runs `discover_gates.py` and `completion_status.py`; `Bash` executes the project's gates; `Write`/`Edit` for slice changes |
 | Claude Desktop (Cowork) | `Write`/`Edit` work; **shell may be unavailable** — see fallback below |
-| Claude Desktop (Code) | Same as Cowork; same fallback |
+| Claude Desktop (Code) | Same capabilities as Cowork, and the shell is normally available; fall back only if a `Bash` call actually fails |
 | 3P CLI/Desktop | Same as the equivalent official surface |
+
+Do not guess which surface you are on by name — test it. Attempt the `Bash` call;
+if it is refused or unavailable, that run is a shell-less run and the fallback
+applies. Assuming a shell exists wastes a run on a failed call; assuming it does
+not exist silently downgrades every gate to `NOT RUN` and understates work that
+was actually possible.
 
 ### When the shell is unavailable
 
@@ -56,12 +62,25 @@ do the same work with files and the rule table:
 
 - **Discovery** — reproduce `discover_gates.py` by reading the repo directly:
   `Glob` for `package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`,
-  `Makefile`, `justfile`, `.github/workflows/*`, `docker-compose.y*ml`,
-  `Dockerfile*`, `*.sln`, lockfiles; `Grep` for `scripts` blocks and CI `run:`
-  steps; `Read` the instruction files (`CLAUDE.md`, `AGENTS.md`, `README.md`).
-- **Status derivation** — apply the invalid-combination table in
-  [references/verification-matrix.md](references/verification-matrix.md) by hand,
-  and state that you did so.
+  `Makefile`, `.github/workflows/*`, `docker-compose.y*ml`, `Dockerfile*`,
+  `*.sln`, `*.csproj`, `*.fsproj`, `*.vbproj`, `*.vcxproj`, and lockfiles;
+  `Grep` for `scripts` blocks and CI `run:` steps; `Read` the instruction files
+  (`CLAUDE.md`, `AGENTS.md`, `README.md`, `DEFINITION_OF_DONE.md`, `DOD.md`,
+  `docs/ARCHITECTURE.md`).
+- **Discovery warnings** — the script's `warnings` and `evidence_gaps` are the
+  honesty mechanism, not decoration. Reproduce them yourself: call out a missing
+  lockfile ("dependency state is unverifiable") and a missing instruction file
+  ("ask the user for conventions") in the report. A by-hand run that drops these
+  looks cleaner than a script run and is less true.
+- **Status derivation** — the precedence rules are implemented in
+  `completion_status.py`, not fully written out in the matrix. Apply this order
+  by hand: any applicable `FAIL` → `FAIL`; else any `BLOCKED` → `BLOCKED`; else
+  any `NOT RUN` → `NOT RUN`; else any `PARTIAL` → `PARTIAL`; else no passing
+  check at all → `NOT APPLICABLE`; else all applicable `PASS` → `PASS`; else
+  `PARTIAL`. Then apply the invalid-combination table in
+  [references/verification-matrix.md](references/verification-matrix.md), and the
+  coverage rule: a `PASS` with coverage not confirmed becomes `PARTIAL`. State
+  that you derived it by hand.
 - **Gate execution** — you cannot run the project's gates. Every check whose
   evidence would have come from an executed run is `NOT RUN`, not `PASS`.
   This is the honest outcome, not a failure of the skill.
@@ -103,18 +122,29 @@ skill-admin:force-complete-slice "finish the invoice export slice in this repo"
 skill-admin:force-complete-slice "verify whether the payments slice is actually complete"
 ```
 
-Arguments: the slice description first, then optional `--repo <path>` and
-`--dry-run` (discovery + contract only, no writes).
+Arguments: the slice description first, then optional `--repo <path>` (operate on
+a repository other than the one you are in; pass it through to discovery and treat
+it as the report's repository root) and `--dry-run` (Steps 1–2 only: discovery and
+contract, no writes and no implementation).
+
+`--dry-run` ends after Step 2 and reports the contract and the discovered gates,
+with every criterion `NOT RUN`. It is the right mode when the user wants to know
+*what completion would take* before agreeing to do it.
 
 ## Procedure
 
 ### Step 1 — Discover project context (read-only)
 
-Determine the repository root, then run:
+Determine the repository root, then run, from the plugin root (the scripts live
+in this skill, not in the repository under inspection — substitute that path if
+it differs, e.g. `${CLAUDE_PLUGIN_ROOT}`):
 
 ```
-uv run skills/force-complete-slice/scripts/discover_gates.py <root> --json
+uv run "$PLUGIN_ROOT/skills/force-complete-slice/scripts/discover_gates.py" <root> --json
 ```
+
+Pass `<root>` explicitly rather than changing directory, so gates are discovered
+for the target repository while the script still resolves.
 
 The script is project-agnostic and read-only. If it cannot run, discover by
 hand with `Read`/`Glob` and say the script was unavailable — do not pretend it
@@ -138,7 +168,9 @@ layer may not be left blank.
 
 Surface, before any code, the infrastructure and topology assumptions the
 contract depends on (single node vs cluster, real database vs substitute,
-browser vs API-only). These become named gates later; they are not footnotes.
+browser vs API-only). Each becomes a check in `results.json` with
+`requires_multinode`, `topology`, and `kind` set accordingly — an assumption that
+is not a check cannot be verified and will silently become a false `PASS`.
 
 If the contract cannot be written without guessing product intent, stop and ask.
 An invented acceptance criterion produces a false completion.
@@ -173,8 +205,19 @@ run against production here.
 Run the project's real commands: build, typecheck, lint, unit, integration,
 acceptance, browser, security, migration, and docs checks, limited to the
 gates that apply. For each result record the command, the exit status, the
-relevant output, and its provenance — `executed`, `ci`, `working-tree`,
-`head`, or `inferred`.
+relevant output, and its provenance — `executed`, `ci`, `formal`, `working-tree`,
+`head`, or `inferred`. These are the only accepted values; anything else is
+downgraded to `PARTIAL`, because an unrecognised provenance is not a stronger
+claim than `inferred`, it is an unexamined one.
+
+Provenance is self-reported and no script can check it: a JSON file cannot prove
+that a command ran. `completion_status.py` enforces only the traps it can see —
+an unrecognised value, `inferred` claiming `PASS`, a formal proof with no stated
+property, an empty or fully-skipped suite, a failing check reclassified as not
+applicable. Honest labelling of `executed` remains yours, and it is the single
+claim the whole report rests on. Likewise `all_coverage_exists` is an assertion
+the script takes on trust; it is your judgement about the contract, not a
+measured fact.
 
 Verify failure paths, not only success. Where an authorization boundary moved,
 verify denial and fail-closed behavior. Where persistence or migration changed,
@@ -188,12 +231,17 @@ escalation ladder in
 [references/escalation-and-persistence.md](references/escalation-and-persistence.md):
 
 1. Re-read the local evidence — the missed file is the usual culprit
-2. Check installed skills, plugins, and agents for an existing capability
-3. Run the gate and read the **full** error, not the last line
-4. Research externally through whatever connectors or MCP tools are present
-5. Reduce to a minimal reproduction
-6. **Delegate to a subagent on the strongest model for an independent verdict**
-7. Change the approach — never the criterion
+2. Training knowledge, as a hypothesis to check — never as evidence
+3. Check installed skills, plugins, and agents for an existing capability
+4. Run the gate and read the **full** error, not the last line
+5. Research externally through whatever connectors or MCP tools are present
+6. Reduce to a minimal reproduction
+7. **Delegate to a subagent on the strongest model for an independent verdict**
+8. Change the approach — never the criterion
+9. Ask the user — only for a decision no amount of research can settle
+
+Record which rungs you used in the report. These nine rungs and their numbering
+are identical to the ladder in the reference; cite the number from this list.
 
 When blocked, delegation is the rung most often skipped and most often
 decisive, because you are the least reliable judge of your own dead end. Give
@@ -202,15 +250,40 @@ your conclusion when you want a genuinely independent read. A subagent's verdict
 is a strong hypothesis, not evidence — execute it and record what happened.
 
 Persistence is bounded by the evidence bar, not by effort. You may change the
-implementation freely; you may never change what counts as proof. After the
-effort budget for a check is spent, report `BLOCKED` or `PARTIAL` with the
-trail of what each avenue ruled out.
+implementation freely; you may never change what counts as proof. Climbing to
+rung 8 and re-entering the ladder with a new approach is persistence. Reporting
+`PASS` because the loop had to end is not. When all nine rungs are spent, that
+criterion is `NOT RUN` with the escalation trail — reserve `BLOCKED` for a
+question only the user can answer, and ask it (rung 9) before concluding you are
+stuck.
 
 Aggregate per-check results with:
 
 ```
-uv run skills/force-complete-slice/scripts/completion_status.py --input results.json --json
+uv run "$PLUGIN_ROOT/skills/force-complete-slice/scripts/completion_status.py" --input results.json --json
 ```
+
+`results.json` holds one object per check. Only `id`, `status`, and `provenance`
+are required; the rest are what make a status auditable, and omitting them
+downgrades the result rather than escaping the rule:
+
+| Field | Purpose |
+|---|---|
+| `id` | Criterion id from the contract (`AC-1`) |
+| `status` | `pass`, `fail`, `partial`, `blocked`, `not_run`, `not_applicable` |
+| `provenance` | `executed`, `ci`, `formal`, `working-tree`, `head`, `inferred` |
+| `kind` | `test`, `build`, `lint`, `migration`, `browser`, `authorization`, `integration`, `deployment`, `ci`, `manual` |
+| `tests_collected` | Integer. **Required for `kind: test`/`browser`/`integration`/`migration` claiming `pass`** — without it the empty-suite guard cannot run and the check drops to `PARTIAL` |
+| `tests_skipped` | Integer. All skipped → `NOT RUN`; some skipped → `PARTIAL` |
+| `evidence` | The observed output. A substitute marker (mock, stub, fake, in-memory, simulator) downgrades an integration/browser/deployment/migration pass |
+| `requires_multinode` + `topology` | Topology claim; mismatch downgrades |
+| `depends_on` | Ids that must not be `FAIL`/`BLOCKED` |
+| `formal_property` | Required when `provenance` is `formal`: the proved statement, one readable sentence |
+| `applies` + `reason` | `false` only with a stated reason, and never to erase a `FAIL` or `BLOCKED` |
+
+Write the real evidence string. It is the only part of the report a reviewer can
+audit, and the substitution rules read it — a vague `"tests passed"` is treated
+as unexamined, not as a pass.
 
 The script applies the status rules deterministically and refuses to return
 `PASS` for an unexecuted or inferred result. Read the rules in
@@ -225,7 +298,11 @@ yourself against the acceptance criteria. Look for bugs, regressions, missing
 tests, security gaps, duplicated logic, dead code, and architecture drift.
 
 Apply cleanup only when it preserves verified behavior, and re-run the gates it
-touched. Do not manufacture findings or edits to make the review look active.
+touched. **Then re-derive the overall status** — Step 7 can invalidate the status
+Step 6 derived, and a report carrying a pre-review status is stale evidence.
+Re-run the gates it touched, update `results.json`, and run
+`completion_status.py` again so the numbers in Step 8 come from the code as it
+now stands. Do not manufacture findings or edits to make the review look active.
 A clean review with no changes is a valid outcome.
 
 ### Step 8 — Report, hand off, and plan the next slice
@@ -331,9 +408,12 @@ The load-bearing points:
 | Surface | Behavior |
 |---|---|
 | **Claude Code CLI** | Full support. Discovers and runs the project's own commands. |
-| **Claude Desktop (Cowork)** | Full support. File-based discovery; shell-dependent gates degrade to `NOT RUN`. |
-| **Claude Desktop (Code)** | Full support. Project-scoped plugins honored. |
-| **3P CLI/Desktop** | Full support. Same boundary contract as the official surface. |
+| **Claude Desktop (Cowork)** | Full support with a known limit: shell-dependent gates degrade to `NOT RUN`. Honest `NOT RUN` is a supported outcome, not a degraded skill. |
+| **Claude Desktop (Code)** | Full support. Project-scoped plugins honored; shell normally present. |
+| **3P CLI/Desktop** | Supported up to the capabilities of the surface it runs on — same boundary contract, but verify shell access rather than assuming it. |
 
 All skills default to `Read`, `Grep`, `Glob` only. Executor skills add
-`Write`/`Edit` only after explicit user confirmation — on every surface.
+`Write`/`Edit` only after explicit user confirmation — on every surface. The
+confirmation is for the slice as agreed in Step 2, so obtain it there and record
+that you have it; Step 4 proceeds on that basis rather than pausing again for
+each file. A change outside the agreed contract needs a fresh confirmation.

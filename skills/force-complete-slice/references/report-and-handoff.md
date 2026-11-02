@@ -17,17 +17,17 @@ for it.
 
 ### Acceptance criteria
 
-| # | Criterion | Status | Evidence |
-|---|---|---|---|
-| AC-1 | <criterion> | PASS | `<command>` exit 0, <n> tests |
-| AC-2 | <criterion> | NOT RUN | no UI runner available |
+| # | Criterion | Status | Provenance | Evidence |
+|---|---|---|---|---|
+| AC-1 | <criterion> | PASS | executed | `<command>` exit 0, <n> tests, 0 skipped |
+| AC-2 | <criterion> | NOT RUN | inferred | no UI runner available |
 
 ### Applied layers
 
-| Layer | Applicable | Status | Reason / evidence |
-|---|---|---|---|
-| domain | yes | PASS | <evidence> |
-| deployment / operations | no | NOT APPLICABLE | <reason> |
+| Layer | Applicable | Status | Provenance | Reason / evidence |
+|---|---|---|---|---|
+| domain | yes | PASS | executed | <evidence> |
+| deployment / operations | no | NOT APPLICABLE | — | <reason> |
 
 ### Commands executed
 

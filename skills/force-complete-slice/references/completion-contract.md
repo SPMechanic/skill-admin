@@ -16,8 +16,14 @@ not in the session.
 
 | # | Criterion | Verified by | Status |
 |---|---|---|---|
-| AC-1 | <observable behavior> | <gate id or manual check> | NOT RUN |
-| AC-2 | <observable behavior> | <gate id> | NOT RUN |
+| AC-1 | <observable behavior> | <gate id from discovery, or `manual: <procedure>`> | NOT RUN |
+| AC-2 | <observable behavior> | <gate id from discovery> | NOT RUN |
+
+A "gate id" is the id `discover_gates.py` emitted for that gate (for example
+`npm:test`, `make:lint`, or the workflow job name). A criterion no discovered
+gate can verify gets `manual: <procedure>` naming the exact steps and what a
+pass looks like — never a bare description. If neither applies, the criterion is
+not yet verifiable and the contract is not ready (see Step 2).
 
 ## Layer applicability
 

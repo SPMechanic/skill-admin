@@ -3,6 +3,21 @@
 Verification exists to produce evidence, not activity. Every check carries a
 status and a provenance, and some combinations are invalid by construction.
 
+## What the script enforces, and what it cannot
+
+`completion_status.py` implements the mechanically checkable rows below:
+provenance validity, `PASS` from `inferred`, empty and fully-skipped suites, an
+unstated test count, the `formal_property` requirement, substitute markers in
+evidence, a browser gate without browser evidence, xfail markers, topology, and
+the refusal to demote a `FAIL` or `BLOCKED` into `NOT APPLICABLE`.
+
+It cannot check honesty. Whether `executed` really ran, whether a mock is hidden
+somewhere the evidence string does not mention, whether a migration's rollback
+was genuinely exercised, whether a feature flag is off by default in the shipped
+configuration — these are judgements the rows below require of *you*. Do not
+treat a green script run as having applied them. When a row describes something
+the script cannot see, apply it by reading the code and the configuration.
+
 ## Status
 
 | Status | Use when |
@@ -40,7 +55,12 @@ wrong even when every individual statement is true.
 | Claim | Why it is invalid | Correct handling |
 |---|---|---|
 | `PASS` with provenance `inferred` | Nothing ran | `PARTIAL` |
+| `PASS` with an unrecognised provenance value | Not a stronger claim than `inferred`, just an unchecked one | `PARTIAL` |
 | `PASS` for a test gate with zero tests collected | An empty suite proves nothing | `NOT RUN` |
+| `PASS` for a test gate with no `tests_collected` stated | The empty-suite rule cannot be applied | `PARTIAL` |
+| `PASS` for a test gate where every collected test was skipped | No useful signal | `NOT RUN` |
+| `PASS` for a test gate with some tests skipped | Weaker than an unqualified pass | `PARTIAL` |
+| `FAIL` or `BLOCKED` re-marked `applies: false` | Erases the evidence a reader most needs | Keep `FAIL`/`BLOCKED`; a failure cannot be removed by asserting it does not apply |
 | `PASS` for an integration criterion backed by a mock | The mock satisfies the mock | `PARTIAL`, name the substitute |
 | `PASS` for a browser criterion backed by a unit test | Different failure surface | `NOT RUN` for the browser gate |
 | `PASS` for a multi-node criterion backed by a single node | Different topology | `PARTIAL`, name the missing topology |

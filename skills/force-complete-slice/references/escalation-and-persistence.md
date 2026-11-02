@@ -132,30 +132,44 @@ redesigning a layer are all legitimate. Declaring victory is not.
 
 You stop for exactly three reasons. Each has a required report entry.
 
-| Reason | Condition | Report must contain |
-|---|---|---|
-| **Verified** | Every applicable criterion is `PASS` with real provenance | The evidence table |
-| **Blocked on the user** | A decision, credential, or access only the user can supply | The specific ask, the options, your recommendation, and what you already ruled out |
-| **Exhausted** | The ladder was climbed at least once, each avenue recorded, and none resolved it | Every avenue tried, what each ruled out, and the narrowest remaining unknown |
+| Reason | Condition | Status it maps to | Report must contain |
+|---|---|---|---|
+| **Verified** | Every applicable criterion is `PASS` with real provenance | `PASS` | The evidence table |
+| **Blocked on the user** | A decision, credential, or access only the user can supply | `BLOCKED` | The specific ask, the options, your recommendation, and what you already ruled out |
+| **Exhausted** | The ladder was climbed at least once, each avenue recorded, and none resolved it | `NOT RUN` for that criterion (never `BLOCKED`, which implies a user ask exists) | Every avenue tried, what each ruled out, and the narrowest remaining unknown |
 
 `Exhausted` is a valid outcome and is **not** a failure. What is never valid is
 reporting `PASS` because the loop had to end.
 
+Map `Exhausted` to `NOT RUN` at the criterion level, not to `BLOCKED`. `BLOCKED`
+means the next move belongs to the user; `Exhausted` means no such move exists,
+and the next engineer must know the difference or they will wait on a decision
+nobody is going to make. If some criteria passed and one is exhausted, the report
+carries `NOT RUN` for that criterion and the overall status follows from the
+precedence rules — usually `NOT RUN` or `PARTIAL`, never `PASS`.
+
 Before declaring `Exhausted`, confirm you actually climbed the ladder: did you
-re-read the local docs, check installed capabilities, read the full error, and
-search externally at least once? Most "impossible" blocks dissolve at rung 1 or
-rung 4 on the second look.
+re-read the local docs, check installed capabilities, read the full error,
+search externally, and delegate for an independent verdict at least once? Most
+"impossible" blocks dissolve at rung 1 or rung 4 on the second look, and a
+genuine dead end is rare once rung 7 is tried.
 
 ## Effort budget
 
-Persistence is not infinite retries of the same thing. Set a budget per check
-and hold to it.
+The budget is on *attempts at one rung*, not on the escalation itself. Effort is
+unbounded in the sense that running out of attempts never ends the work — it
+moves you up the ladder. Climbing to rung 8 and re-entering at rung 4 with a new
+approach is normal, not a second attempt at the same thing.
 
-- **Simple check** — two attempts, then escalate a rung.
+- **Simple check** — two attempts at the current rung, then escalate a rung.
 - **Complex or flaky check** — three attempts, capturing the full output of each.
 - **Research** — one focused pass per rung 5 tool; stop when the answer is
   established or the sources stop adding new information.
 - **Same error twice** — stop. The approach is wrong, not the attempt count.
+  That is a signal to go to rung 8, not to stop working.
 
-When the budget is spent, report `BLOCKED` or `PARTIAL` with the escalation
-trail. A recorded dead end is a real result; it saves the next person the walk.
+When you have climbed all nine rungs and none resolved the check, report it as
+`Exhausted` → `NOT RUN` with the escalation trail. `BLOCKED` is reserved for a
+question only the user can answer; if you have not asked them, and the answer
+would unblock you, go to rung 9 first. A recorded dead end is a real result; it
+saves the next person the walk.

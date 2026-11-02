@@ -170,7 +170,13 @@ def discover(root: Path) -> dict:
     rel_strings = [str(f).replace("\\", "/") for f in files]
     rel_set = set(rel_strings)
 
-    instructions = [p for p in INSTRUCTION_FILES if p in rel_set]
+    instructions = [
+        p
+        for p in INSTRUCTION_FILES
+        # Some entries are directories (e.g. .cursor/rules), so match any
+        # scanned file that lives under them rather than the exact path.
+        if p in rel_set or any(s == p or s.startswith(p + "/") for s in rel_strings)
+    ]
 
     manifests = [
         {"file": str(f).replace("\\", "/"), "ecosystem": MANIFEST_FILES[f.name]}
