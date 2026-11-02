@@ -154,14 +154,55 @@ The orchestration report gains a resolution table:
 
 ```markdown
 ### Dependency resolution
-| Slice | Class | Wave | Model pair | Result |
-|---|---|---|---|---|
-| access | Partial (3 of 7 NOT RUN) | 1 | fast/standard | PASS |
-| student | Missing | 1 | strong/strong | BLOCKED — user decision |
-| lecturer | Missing | 1 | standard/strong | PASS |
-| dashboard | Blocked → re-classified | 2 | strong/strong | PASS |
+| Slice | Class | Wave | Model pair | Scheduled as | Evidence held |
+|---|---|---|---|---|---|
+| access | Partial (3 of 7 NOT RUN) | 1 | fast/standard | run | re-verified this run |
+| student | Missing | 1 | strong/strong | blocked — user decision | none |
+| lecturer | Missing | 1 | standard/strong | run | re-verified this run |
+| dashboard | Blocked → re-classified | 2 | strong/strong | run | re-verified this run |
+| billing | Complete (prior run) | — | — | skipped, PASS claimed | **not re-verified** |
 ```
 
-A slice the stop condition turned away is reported `BLOCKED` with the user
+A slice the stop condition turned away is recorded `blocked` with the user
 question, not omitted — an absent row reads as "nothing was needed," which is a
 false green at the plan level.
+
+The column is `Scheduled as`, not `Result`, and there is no `PASS` cell. This
+skill schedules; it never verifies. A slice whose prior artifacts read all-PASS
+is recorded as **`skipped, PASS claimed`** with evidence held **`not
+re-verified`**, keeping the two-currency rule visible in the report rather than
+only in the prose above it. An imported PASS is a claim — the same rule
+force-complete-slice applies — so a reader must not be able to mistake a
+scheduling decision for evidence.
+
+## What is checked by code and what stays prose
+
+Force-complete-slice owns the scripts; this skill has one of its own, for the
+rules that are pure file inspection:
+
+```
+uv run "$PLUGIN_ROOT/skills/skill-orchestrator/scripts/classify_slices.py" <root> [--slice NAME ...]
+```
+
+It classifies each slice from `.audit/<slice>/acceptance.tsv` — every row
+`PASS` → Complete, any row not `PASS` → Partial, no directory → Missing — and
+builds waves from inter-slice `depends_on` edges, where a cycle is an error and
+the topological order is the wave order. Classification is where a scheduling
+decision is most likely to be mistaken for evidence, so it is done mechanically.
+
+Three judgments stay prose, in this document, read by a person:
+
+- **Hollow classification before any run exists.** Presentation with no backend
+  behind it can only be inferred from a repository shape, and a script that
+  guessed would turn a provisional call into a green verdict. Mark it
+  provisional until a run has produced a contract, at which point
+  force-complete-slice's own `hollow_warning` carries the flag.
+- **Decomposition quality.** Whether a slice is too fine, too coarse, or crosses
+  a foundation boundary is a judgment about the user's intent that the
+  artifacts do not contain.
+- **The foundation boundary itself.** How deep the ladder may be resolved is a
+  decision about the user's scope, not a property of the graph.
+
+A checker for these would launder judgment into a green mark — the exact failure
+this plugin exists to prevent. Adding one later is a regression, not an
+improvement.

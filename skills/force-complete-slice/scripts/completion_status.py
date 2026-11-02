@@ -37,6 +37,14 @@ criterion that is absent from results.json is reported as a check with status
 NOT RUN and a note saying it was dropped from the results, because omitting
 an inconvenient criterion must never read as clean.
 
+An object may also carry {"code_complete": true|false}, the verdict from
+code_completeness.py. Code completeness is a gate: when it is false, no check
+may hold PASS, because the slice's shape is not all there and a passing subset
+of an incomplete slice is not a pass. When the key is absent the gate does not
+apply — that keeps a bare check list usable on its own — but the slice then
+cannot be reported DONE, and code_completeness.py is what establishes the
+state.
+
 Exit code:
     0 — derived a status (even if that status is FAIL or BLOCKED)
     2 — input unreadable or malformed
@@ -389,7 +397,7 @@ def _hollow_warning(checks: list[dict]) -> str | None:
     return None
 
 
-def derive(checks: list[dict], coverage_exists) -> dict:
+def derive(checks: list[dict], coverage_exists, code_complete=None) -> dict:
     by_id = {c["id"]: c for c in checks}
     # Dependencies can chain (AC-3 -> AC-2 -> AC-1), so one pass is not enough:
     # iterate to a fixed point. Bounded by the number of checks, since every
@@ -434,6 +442,22 @@ def derive(checks: list[dict], coverage_exists) -> dict:
     if overall == "PASS" and coverage != "yes":
         overall = "PARTIAL"
 
+    # Code completeness is a gate, not an axis. A passing subset of a slice
+    # whose layers do not all exist is not a pass: the criteria that would
+    # have failed are the ones never written. Only an explicit false gates —
+    # omitting the key means the caller is not using the gate, so it does not
+    # silently rewrite every existing all-green result.
+    if code_complete is False:
+        for c in checks:
+            if c["status"] == "PASS":
+                c["status"] = "PARTIAL"
+                c["notes"].append(
+                    "slice is not code complete — a passing check does not "
+                    "establish a pass over an incomplete slice"
+                )
+        if overall in ("PASS", "PARTIAL"):
+            overall = "PARTIAL"
+
     # Every applicable check passed. Computed over the applicable subset, not
     # over every row: a reasoned NOT APPLICABLE is not a failure to pass.
     claim_one = (
@@ -452,13 +476,14 @@ def derive(checks: list[dict], coverage_exists) -> dict:
 
     return {
         "overall": overall,
+        "code_complete": code_complete,
         "claim_all_applicable_checks_passed": claim_one,
         "claim_all_intended_coverage_exists": coverage,
         "counts": {
             "total": len(checks),
             "applicable": len(applicable),
             "pass": sum(1 for c in checks if c["status"] == "PASS"),
-            "partial": len(partial),
+            "partial": sum(1 for c in checks if c["status"] == "PARTIAL"),
             "fail": len(blocking),
             "blocked": len(blocked),
             "not_run": len(not_run),
@@ -475,15 +500,19 @@ def derive(checks: list[dict], coverage_exists) -> dict:
     }
 
 
-def load_input(path: Path) -> tuple[list[dict], object, list]:
+def load_input(path: Path) -> tuple[list[dict], object, list, object]:
     data = json.loads(path.read_text(encoding="utf-8"))
     contract = None
+    code_complete = None
     if isinstance(data, list):
         raw_checks, coverage = data, None
     elif isinstance(data, dict):
         raw_checks = data.get("checks")
         coverage = data.get("all_coverage_exists")
         contract = data.get("contract")
+        code_complete = data.get("code_complete")
+        if code_complete is not None and not isinstance(code_complete, bool):
+            raise ValueError("'code_complete' must be a boolean")
         if contract is not None and (
             not isinstance(contract, list) or not all(isinstance(i, str) for i in contract)
         ):
@@ -493,13 +522,15 @@ def load_input(path: Path) -> tuple[list[dict], object, list]:
     else:
         raise ValueError("input must be a list of checks or an object with 'checks'")
     checks = [_as_check(item, i) for i, item in enumerate(raw_checks)]
-    return _reconcile_contract(checks, contract), coverage, contract
+    return _reconcile_contract(checks, contract), coverage, contract, code_complete
 
 
 def render_text(result: dict) -> str:
     lines = [f"overall: {result['overall']}"]
     lines.append(f"claim 1 — all applicable checks passed: {result['claim_all_applicable_checks_passed']}")
     lines.append(f"claim 2 — all intended coverage exists: {result['claim_all_intended_coverage_exists']}")
+    cc = result.get("code_complete")
+    lines.append(f"code complete: {'yes' if cc is True else ('no' if cc is False else 'not stated')}")
     lines.append("")
     for c in result["checks"]:
         lines.append(f"  {c['id']}: {c['status']} ({c['provenance']})")
@@ -600,12 +631,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     try:
-        checks, coverage, contract = load_input(Path(raw_path))
+        checks, coverage, contract, code_complete = load_input(Path(raw_path))
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    result = derive(checks, coverage)
+    result = derive(checks, coverage, code_complete)
     if args.json:
         print(json.dumps(result, indent=2))
     else:

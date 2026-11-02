@@ -116,6 +116,20 @@ word like "Phase 2" is a scheduling claim, not evidence of independence —
 the resolver's classification is what decides, and it may contradict the
 narrative's ordering.
 
+Run the classifier rather than classifying by hand:
+
+```
+uv run "$PLUGIN_ROOT/skills/skill-orchestrator/scripts/classify_slices.py" <root> --json
+```
+
+It reads `.audit/<slice>/acceptance.tsv` for each slice and `.audit/slices.json`
+for `{"edges": {slice: [prerequisites]}}`, and returns each class plus the wave
+order. A cycle exits 2 — report it, do not guess an order. With no
+`acceptance.tsv` anywhere, every slice is `Missing`, which is correct on a first
+run. Hollow classification, decomposition quality, and the foundation boundary
+stay prose: see the section in the resolver doc explaining why a checker for
+those would be a regression.
+
 ### Step 2 — Classify the pattern
 
 | Pattern | Mode |

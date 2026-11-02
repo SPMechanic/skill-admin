@@ -397,6 +397,52 @@ The script applies the status rules deterministically and refuses to return
 core rule is that "all applicable checks passed" and "all intended product
 coverage exists" are two different claims and must be reported separately.
 
+### Step 6b — Establish code completeness
+
+Code completeness is a **structural and mechanical** state, and it is a **gate**:
+no criterion may be reported `PASS` until the slice is code complete. This is
+what stops a contract being satisfied by an easy subset — the bar is anchored to
+the slice's shape, not to whatever criteria happened to be written down.
+
+A slice is **CODE COMPLETE** when all of these hold:
+
+1. **Layers exist, unstocked.** Every layer the contract names — aggregate,
+   service, repository, port, endpoint, UI surface — exists on disk. No stubbed
+   handler returning a placeholder, no `TODO: implement`, no empty body standing
+   in for behavior.
+2. **Dependencies resolved.** Every declared dependency exists, is itself at
+   least code complete, and is importable/bootable. Transitive: a dependency that
+   depends on a missing module is not resolved.
+3. **It builds.** The project's build command succeeds with no errors.
+4. **Migrations apply** against a real database engine — localhost or a
+   container. Not an in-memory substitute for the engine the slice targets.
+5. **It boots**, and a request round-trips with simulated data.
+
+Checks 3–5 must be *executed*, not asserted. A green compile says nothing about
+whether the app starts, whether migrations apply, or whether the database
+connection works; those four execution steps are where stubs and missing wiring
+surface. Run:
+
+```
+uv run "$PLUGIN_ROOT/skills/force-complete-slice/scripts/code_completeness.py" \
+  --root "$PWD" --build "<build command>" --migrate "<migrate command>" \
+  --boot "<start command>" --probe "<url>" --slice <slug>
+```
+
+**Code complete makes no claim about correctness.** A slice can be code complete
+and still do the wrong thing — a correctly wired backend that computes the wrong
+total builds and boots. That is why the states are separate:
+
+| State | Means | Requires |
+|---|---|---|
+| **CODE COMPLETE** | Shape is all there; it builds, migrates, boots, serves | Steps 1–5 above |
+| **VERIFIED** | Every contract criterion executed with real evidence | `PASS` from `completion_status.py` |
+| **DONE** | Both | Code complete **and** verified |
+
+Only `DONE` may be described to the user as complete, finished, or 100%. Code
+complete with no testing is a legitimate stopping point — but it is reported as
+code complete, never as done.
+
 ### Step 7 — Review and simplify
 
 Use the repository's review workflow if one exists; otherwise review the diff
