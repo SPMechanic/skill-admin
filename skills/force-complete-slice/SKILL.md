@@ -143,6 +143,16 @@ session already established. Step 2 explains how.
 with every criterion `NOT RUN`. It is the right mode when the user wants to know
 *what completion would take* before agreeing to do it.
 
+**A slice that doesn't exist yet is not a refusal.** When the user asks for a
+new module or slice that has no code, no audit, and no design behind it, do not
+warn them away or demand a design document first — the contract derivation in
+Step 2 *is* the design assistance. Run `--dry-run` and deliver the design
+contract: proposed acceptance criteria, layer table, the ports and events the
+slice would require from its neighbors, and every open business decision as an
+explicit `BLOCKED` criterion naming who must decide it. That output is the
+starting point for the design conversation, and it is grounded — every proposed
+criterion is checkable later, unlike assumptions silently baked into code.
+
 ## Procedure
 
 ### Step 1 — Discover project context (read-only)
