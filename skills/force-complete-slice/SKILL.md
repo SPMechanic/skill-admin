@@ -124,8 +124,15 @@ skill-admin:force-complete-slice "verify whether the payments slice is actually 
 
 Arguments: the slice description first, then optional `--repo <path>` (operate on
 a repository other than the one you are in; pass it through to discovery and treat
-it as the report's repository root) and `--dry-run` (Steps 1–2 only: discovery and
-contract, no writes and no implementation).
+it as the report's repository root), `--contract <path>` (seed Step 2 from an
+existing audit or contract document instead of re-deriving criteria; see
+[references/completion-contract.md](references/completion-contract.md)), and
+`--dry-run` (Steps 1–2 only: discovery, contract, and prior-evidence recall —
+no writes and no implementation).
+
+If the user asks to reuse audit work from a previous session ("we already audited
+this", "use my earlier review"), run recall first — do not re-derive what a prior
+session already established. Step 2 explains how.
 
 `--dry-run` ends after Step 2 and reports the contract and the discovered gates,
 with every criterion `NOT RUN`. It is the right mode when the user wants to know
@@ -160,8 +167,32 @@ endpoint, UI flow, migration, or other. Say which, and why.
 
 ### Step 2 — Define the completion contract
 
-Convert the request into numbered acceptance criteria that can each be marked
-verified or not. Then fill the layer table from
+If `--contract <path>` was passed, or the user points at a prior audit, seed the
+contract from that document instead of re-deriving it. Transcribe its criteria,
+layers, and topology assumptions; fill only genuine gaps. Name the source path
+in the contract so the report shows where the criteria came from.
+
+A prior audit may also be **recalled from a previous session** when the user asks
+for it. Transcripts live under `~/.claude/projects/<project-slug>/*.jsonl`:
+
+```
+uv run "$PLUGIN_ROOT/skills/force-complete-slice/scripts/recall_audit.py" \
+  <root> --slice "<slice keywords>" --json
+```
+
+The script is read-only and extracts candidate `AC-*` criteria, statuses, and
+evidence lines, ranked by recency and keyword overlap. It reads the local
+transcript store only; it sends nothing anywhere.
+
+**Imported findings are claims, not evidence.** Whatever a prior session or an
+audit document asserts — including a `PASS` — enters the contract as a criterion
+with status `NOT RUN` and a note naming its source. Step 5 re-verifies it with a
+real gate run in this session. Never carry a prior `PASS` into the report, and
+never let an imported criterion skip verification: a stale pass is the most
+expensive false green there is, because it was once true.
+
+Then convert the request into numbered acceptance criteria that can each be
+marked verified or not. Fill the layer table from
 [references/completion-contract.md](references/completion-contract.md): every
 layer is either **applicable** or **not applicable with a stated reason**. A
 layer may not be left blank.
@@ -173,7 +204,9 @@ browser vs API-only). Each becomes a check in `results.json` with
 is not a check cannot be verified and will silently become a false `PASS`.
 
 If the contract cannot be written without guessing product intent, stop and ask.
-An invented acceptance criterion produces a false completion.
+An invented acceptance criterion produces a false completion. Asking is rung 9,
+not rung 7: an independent subagent verdict settles whether a technical claim
+holds, never what the product should do.
 
 ### Step 3 — Inspect before editing
 

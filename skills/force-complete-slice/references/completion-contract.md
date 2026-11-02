@@ -69,6 +69,28 @@ not yet verifiable and the contract is not ready (see Step 2).
 6. **Criteria come from the request and the project.** Never invent product
    behavior to make a contract fillable. If the request cannot produce a
    criterion, stop and ask.
+7. **Imported criteria enter as `NOT RUN`.** Criteria taken from `--contract`,
+   a prior audit document, or a recalled transcript carry their source in the
+   criterion row and status `NOT RUN`. A prior `PASS` is a claim about a tree
+   that no longer exists; Step 5 re-verifies it with a real gate run.
+
+## Seeding from a prior audit
+
+`--contract <path>` and `recall_audit.py` exist so a repeat audit does not pay
+for the same discovery twice. Both are inputs to this step, never substitutes
+for it.
+
+| Source | What to carry | What to redo |
+|---|---|---|
+| `--contract <path>` | criteria text, layer rows, topology assumptions | status of every criterion |
+| Recalled transcript | candidate criteria, prior statuses as claims | the criteria themselves, if the slice was re-scoped |
+| Neither | — | derive from the request and the project |
+
+Keep the source path in the contract. A criterion whose origin is unrecorded
+cannot be audited later by someone who was not in the session.
+
+Rules 1–5 still apply unchanged to imported criteria: an imported line that is
+not observable gets rewritten, not accepted because a prior session wrote it.
 
 ## Layer prompt
 
