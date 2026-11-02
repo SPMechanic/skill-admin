@@ -31,6 +31,12 @@ Input may be a bare list of checks or an object with a "checks" key. An object
 may also carry {"all_coverage_exists": true|false} for the second claim; when
 absent, that claim is reported as unknown rather than assumed.
 
+An object may also carry "contract": a list of criterion ids from the
+completion contract. When present, every id must appear in the checks: a
+criterion that is absent from results.json is reported as a check with status
+NOT RUN and a note saying it was dropped from the results, because omitting
+an inconvenient criterion must never read as clean.
+
 Exit code:
     0 — derived a status (even if that status is FAIL or BLOCKED)
     2 — input unreadable or malformed
@@ -314,6 +320,75 @@ def apply_rules(check: dict, by_id: dict) -> None:
         downgrade(check, "PARTIAL", "working-tree state is not a CI result")
 
 
+def _reconcile_contract(checks: list[dict], contract) -> list[dict]:
+    """Synthesise a NOT RUN check for every contract criterion the results
+    omitted. Without this, dropping a criterion is cheaper than clearing it.
+
+    Ids are matched exactly; a contract may carry ids not otherwise referenced.
+    """
+    if not contract:
+        return checks
+    seen = {c["id"] for c in checks}
+    missing = [cid for cid in contract if isinstance(cid, str) and cid.strip() and cid not in seen]
+    out = list(checks)
+    for cid in missing:
+        out.append(
+            {
+                "id": cid,
+                "requested_applies": True,
+                "applies": True,
+                "reported_status": "NOT RUN",
+                "original_status": "NOT RUN",
+                "status": "NOT RUN",
+                "provenance": "inferred",
+                "kind": "",
+                "tests_collected": None,
+                "tests_skipped": None,
+                "depends_on": [],
+                "requires_multinode": False,
+                "topology": "single-node",
+                "reason": None,
+                "evidence": None,
+                "formal_property": None,
+                "notes": [
+                    "criterion is in the completion contract but absent from the "
+                    "results — an omitted criterion is unverified, never satisfied"
+                ],
+            }
+        )
+    return out
+
+
+# Layers whose presence proves a slice has a real domain behind its UI.
+BACKEND_LAYERS = {
+    "domain", "persistence", "repository", "service", "api", "backend",
+    "contract", "migration", "event", "read-model", "integration",
+}
+# Layers that describe presentation only.
+PRESENTATION_LAYERS = {"ui", "frontend", "view", "component", "page", "mockup", "shell"}
+
+
+def _hollow_warning(checks: list[dict]) -> str | None:
+    """A contract with presentation criteria and no backend criterion is the
+    signature of a hollow slice. Detection is a paragraph elsewhere; this makes
+    it visible in the report even when an agent skipped the prose."""
+    size = len(checks)
+    if size == 0 or size > 16:
+        return None
+    kinds = [c["kind"] for c in checks if c["kind"]]
+    if not kinds:
+        return None
+    has_presentation = any(k in PRESENTATION_LAYERS for k in kinds)
+    has_backend = any(k in BACKEND_LAYERS for k in kinds)
+    if has_presentation and not has_backend:
+        return (
+            "contract has presentation criteria and no backend/domain criterion — "
+            "this looks like a hollow slice; derive a design contract (ports, "
+            "events, read models) before implementation criteria"
+        )
+    return None
+
+
 def derive(checks: list[dict], coverage_exists) -> dict:
     by_id = {c["id"]: c for c in checks}
     # Dependencies can chain (AC-3 -> AC-2 -> AC-1), so one pass is not enough:
@@ -391,6 +466,7 @@ def derive(checks: list[dict], coverage_exists) -> dict:
         },
         "checks": checks,
         "skipped_tests": skipped_detail,
+        "hollow_warning": _hollow_warning(checks),
         "unresolved": [
             {"id": c["id"], "status": c["status"], "reason": c["notes"] or [c.get("reason") or c.get("evidence") or ""]}
             for c in checks
@@ -399,19 +475,25 @@ def derive(checks: list[dict], coverage_exists) -> dict:
     }
 
 
-def load_input(path: Path) -> tuple[list[dict], object]:
+def load_input(path: Path) -> tuple[list[dict], object, list]:
     data = json.loads(path.read_text(encoding="utf-8"))
+    contract = None
     if isinstance(data, list):
         raw_checks, coverage = data, None
     elif isinstance(data, dict):
         raw_checks = data.get("checks")
         coverage = data.get("all_coverage_exists")
+        contract = data.get("contract")
+        if contract is not None and (
+            not isinstance(contract, list) or not all(isinstance(i, str) for i in contract)
+        ):
+            raise ValueError("'contract' must be a list of criterion id strings")
         if not isinstance(raw_checks, list):
             raise ValueError("object input must carry a 'checks' array")
     else:
         raise ValueError("input must be a list of checks or an object with 'checks'")
     checks = [_as_check(item, i) for i, item in enumerate(raw_checks)]
-    return checks, coverage
+    return _reconcile_contract(checks, contract), coverage, contract
 
 
 def render_text(result: dict) -> str:
@@ -433,20 +515,92 @@ def render_text(result: dict) -> str:
     return "\n".join(lines)
 
 
+def write_audit(result: dict, root: Path, slice_slug: str, contract: list | None) -> Path:
+    """Persist the contract and status so a later session — or the orchestrator —
+    can read what this run found. The orchestrator classifies slices from these
+    files; nothing else writes them, so without this the .audit convention can
+    never be satisfied by this plugin.
+
+    Row order follows the contract when one was given, then any remaining checks.
+    """
+    audit_dir = root / ".audit" / slice_slug
+    audit_dir.mkdir(parents=True, exist_ok=True)
+
+    by_id = {c["id"]: c for c in result["checks"]}
+    ordered: list[str] = []
+    for cid in contract or []:
+        if cid in by_id and cid not in ordered:
+            ordered.append(cid)
+    for c in result["checks"]:
+        if c["id"] not in ordered:
+            ordered.append(c["id"])
+
+    lines = [
+        "criterion\tlayer\tstatus\tprovenance\tevidence",
+        *(
+            "\t".join(
+                _tsv(
+                    by_id[cid]["id"],
+                    by_id[cid]["kind"],
+                    by_id[cid]["status"],
+                    by_id[cid]["provenance"],
+                    (by_id[cid]["evidence"] or "").replace("\n", " "),
+                )
+            )
+            for cid in ordered
+        ),
+    ]
+    (audit_dir / "acceptance.tsv").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    (audit_dir / "status.json").write_text(
+        json.dumps(
+            {
+                "slice": slice_slug,
+                "overall": result["overall"],
+                "claims": {
+                    "all_applicable_checks_passed": result["claim_all_applicable_checks_passed"],
+                    "all_intended_coverage_exists": result["claim_all_intended_coverage_exists"],
+                },
+                "counts": result["counts"],
+                "hollow_warning": result.get("hollow_warning"),
+                "checks": [
+                    {"id": c["id"], "status": c["status"], "provenance": c["provenance"], "notes": c["notes"]}
+                    for c in result["checks"]
+                ],
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    return audit_dir
+
+
+def _tsv(*cells: str) -> list[str]:
+    return [str(c).replace("\t", " ").replace("\r", " ").replace("\n", " ") for c in cells]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Derive completion status from check results.")
     parser.add_argument("input", nargs="?", help="path to results JSON")
     parser.add_argument("--input", dest="input_opt", help="path to results JSON")
     parser.add_argument("--json", action="store_true", help="emit JSON")
+    parser.add_argument(
+        "--audit-root",
+        help="write .audit/<slice>/acceptance.tsv and status.json under this root",
+    )
+    parser.add_argument("--slice", dest="slice_slug", help="slice slug for the .audit directory")
     args = parser.parse_args(argv)
 
     raw_path = args.input_opt or args.input
     if not raw_path:
         print("error: no input file given", file=sys.stderr)
         return 2
+    if bool(args.audit_root) != bool(args.slice_slug):
+        print("error: --audit-root and --slice must be given together", file=sys.stderr)
+        return 2
 
     try:
-        checks, coverage = load_input(Path(raw_path))
+        checks, coverage, contract = load_input(Path(raw_path))
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
@@ -456,6 +610,16 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, indent=2))
     else:
         print(render_text(result))
+
+    if result.get("hollow_warning"):
+        print(
+            f"\nwarning: {result['hollow_warning']}",
+            file=sys.stderr,
+        )
+
+    if args.audit_root:
+        written = write_audit(result, Path(args.audit_root), args.slice_slug, contract)
+        print(f"\naudit written: {written}", file=sys.stderr)
     return 0
 
 

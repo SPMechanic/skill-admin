@@ -153,6 +153,17 @@ explicit `BLOCKED` criterion naming who must decide it. That output is the
 starting point for the design conversation, and it is grounded — every proposed
 criterion is checkable later, unlike assumptions silently baked into code.
 
+**The audit is written, not just reported.** Pass `"contract": ["AC-1", ...]`
+in the results object alongside `"checks"` — the script then reports every
+contract criterion absent from the results as `NOT RUN` with a dropped-criterion
+note, so omitting an inconvenient criterion can never read as clean. At the end
+of a run, invoke the script with `--audit-root <root> --slice <slug>` to write
+`<root>/.audit/<slug>/acceptance.tsv` and `status.json`. Those two files are the
+only thing a later session or skill-orchestrator can read; a run that reports
+in Markdown alone leaves nothing behind, and the next session legitimately
+re-derives from scratch. A contract carrying presentation criteria and no
+backend or domain criterion is flagged as a hollow slice in the report.
+
 ## Procedure
 
 ### Step 1 — Discover project context (read-only)
@@ -351,8 +362,12 @@ stuck.
 Aggregate per-check results with:
 
 ```
-uv run "$PLUGIN_ROOT/skills/force-complete-slice/scripts/completion_status.py" --input results.json --json
+uv run "$PLUGIN_ROOT/skills/force-complete-slice/scripts/completion_status.py" --input results.json --json \
+  --audit-root "$PWD" --slice <slice-slug>
 ```
+
+`--audit-root` and `--slice` persist the run to `.audit/<slice>/`; omit them only
+when the user asked for a read-only analysis.
 
 `results.json` holds one object per check. Only `id`, `status`, and `provenance`
 are required; the rest are what make a status auditable, and omitting them
