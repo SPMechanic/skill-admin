@@ -25,7 +25,7 @@ the script cannot see, apply it by reading the code and the configuration.
 | `PASS` | Executed, and the output matched the criterion |
 | `PARTIAL` | Something ran and was correct, but at least one aspect of the criterion is unmet or unverified |
 | `FAIL` | Executed, and the output contradicted the criterion |
-| `BLOCKED` | Applicable, but a required dependency, service, credential, or environment is absent |
+| `BLOCKED` | Applicable, but a required dependency, service, credential, environment, or user decision is absent — including a rung-9 question that was asked and not yet answered |
 | `NOT RUN` | Applicable, but nothing was executed — including a suite that discovered zero tests |
 | `NOT APPLICABLE` | Out of scope for this slice, with a stated reason |
 

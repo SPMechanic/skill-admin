@@ -126,8 +126,11 @@ Arguments: the slice description first, then optional `--repo <path>` (operate o
 a repository other than the one you are in; pass it through to discovery and treat
 it as the report's repository root), `--contract <path>` (seed Step 2 from an
 existing audit or contract document instead of re-deriving criteria; see
-[references/completion-contract.md](references/completion-contract.md)), and
-`--dry-run` (Steps 1–2 only: discovery, contract, and prior-evidence recall —
+[references/completion-contract.md](references/completion-contract.md)),
+`--override-effort "authorized by <user> at <time>"` (lift the attempt budget for
+an explicitly authorized run; see
+[references/escalation-and-persistence.md](references/escalation-and-persistence.md)),
+and `--dry-run` (Steps 1–2 only: discovery, contract, and prior-evidence recall —
 no writes and no implementation).
 
 If the user asks to reuse audit work from a previous session ("we already audited
@@ -275,6 +278,12 @@ escalation ladder in
 
 Record which rungs you used in the report. These nine rungs and their numbering
 are identical to the ladder in the reference; cite the number from this list.
+
+Rung 9 is a handoff, not an ending. If you ask and the answer does not come, the
+criterion is `BLOCKED` with the question, the options, and your recommendation
+recorded — never `NOT RUN`, because a person can still unblock it. An explicitly
+authorized `--override-effort` run lifts the attempt budget and never the evidence
+bar: an overridden run still cannot report `PASS` without a gate that executed.
 
 When blocked, delegation is the rung most often skipped and most often
 decisive, because you are the least reliable judge of your own dead end. Give

@@ -173,3 +173,54 @@ When you have climbed all nine rungs and none resolved the check, report it as
 question only the user can answer; if you have not asked them, and the answer
 would unblock you, go to rung 9 first. A recorded dead end is a real result; it
 saves the next person the walk.
+
+## Asked but unanswered (rung 9)
+
+Rung 9 is a handoff, not a session end. If you asked the user and the answer did
+not arrive — they stepped away, the turn ended, the session was resumed later —
+the criterion is `BLOCKED`, with the question recorded verbatim. Never degrade
+it to `Exhausted`/`NOT RUN`: that says nobody can unblock it, when in fact one
+person can, and silence is not a verdict.
+
+Record with every unanswered rung-9 criterion:
+
+- the question, worded so it can be answered without re-reading the session
+- the options, with your recommendation and why
+- what you already ruled out, so the answer is not "try that again"
+- what each answer unblocks, so a one-word reply is sufficient
+
+An answered question resumes at the rung its answer points to. A resumed session
+picks the criterion up from here; it does not re-ask what is already written down.
+
+## Explicit effort override
+
+The user may authorize more effort than the attempt budget above. Honor it — the
+effort bound is theirs to spend — but it changes **one** thing.
+
+| It changes | It never changes |
+|---|---|
+| The attempt budget, and the number of times you may re-enter the ladder at rung 8 | What counts as evidence for `PASS` |
+| How many rungs you may climb on the same criterion | The status of a criterion with no executed gate |
+
+Before starting an overridden run, state the cost and the limit once:
+
+> Effort override accepted for AC-&lt;n&gt;. Attempts are unbounded for this run.
+> This does not make unavailable evidence available: if the ladder is exhausted,
+> the result stays `Exhausted` → `NOT RUN`, and if the block needs a decision, it
+> stays `BLOCKED`. Estimated cost: &lt;attempts already spent, what each further
+> round will run&gt;.
+
+Then work, and record the override in the report with who authorized it and when.
+An override never authorizes a `PASS` the gates did not produce — not after the
+twentieth attempt, and not because the budget was explicitly unlimited. More
+persistence finds more evidence; it never substitutes for it. If the user asks
+for that substitution, it is not an override, and you say so plainly.
+
+## Non-termination is a defect
+
+Every run ends in exactly one of the Termination table's three states. A run
+that stops without recording one — because a question went unanswered, because
+the turn ended mid-ladder, because context ran out — has left the work in a state
+nobody can resume. Before ending any run, write the current status of every
+criterion and the next specific action. That sentence is the difference between a
+handoff and an abandoned task.
