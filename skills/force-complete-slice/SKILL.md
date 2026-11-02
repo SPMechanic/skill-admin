@@ -370,7 +370,7 @@ define one. Otherwise state that the next slice is undefined.
 | `PASS` | Executed and matched the acceptance criterion |
 | `PARTIAL` | Some part is executed and correct; at least one aspect is unmet or unverified |
 | `FAIL` | Executed and contradicted the acceptance criterion |
-| `BLOCKED` | Cannot execute because a required dependency or environment is absent |
+| `BLOCKED` | Cannot execute because a required dependency or environment is absent, or because a rung-9 question awaits the user's answer |
 | `NOT RUN` | Applicable, but no execution happened — including zero discovered tests |
 | `NOT APPLICABLE` | Out of scope, with a stated reason |
 

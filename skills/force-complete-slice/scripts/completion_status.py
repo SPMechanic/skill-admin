@@ -143,9 +143,35 @@ def downgrade(check: dict, status: str, note: str) -> None:
         check["notes"].append(note)
 
 
-def apply_rules(check: dict) -> None:
+def apply_rules(check: dict, by_id: dict) -> None:
     """Enforce the invalid-combination table. Downgrades only, never upgrades."""
     status = check["status"]
+
+    # A check whose dependency failed or is blocked cannot itself have passed:
+    # the dependency was not in place when it ran, so whatever it observed was
+    # observed against the wrong tree.
+    if status == "PASS":
+        for dep_id in check["depends_on"]:
+            if dep_id == check["id"]:
+                downgrade(check, "PARTIAL", "check depends on itself")
+                break
+            dep = by_id.get(dep_id)
+            if dep is None:
+                downgrade(
+                    check,
+                    "PARTIAL",
+                    f"dependency {dep_id!r} is not in this contract — "
+                    "a PASS against an unverifiable dependency is unverifiable",
+                )
+                break
+            if dep["status"] in ("FAIL", "BLOCKED", "PARTIAL", "NOT RUN"):
+                downgrade(
+                    check,
+                    "PARTIAL",
+                    f"dependency {dep_id} is {dep['status']} — this check cannot "
+                    "pass while a prerequisite is unmet",
+                )
+                break
 
     if status == "NOT APPLICABLE":
         # A FAIL or BLOCKED cannot be demoted into a non-applicable row: that
@@ -289,8 +315,16 @@ def apply_rules(check: dict) -> None:
 
 
 def derive(checks: list[dict], coverage_exists) -> dict:
-    for c in checks:
-        apply_rules(c)
+    by_id = {c["id"]: c for c in checks}
+    # Dependencies can chain (AC-3 -> AC-2 -> AC-1), so one pass is not enough:
+    # iterate to a fixed point. Bounded by the number of checks, since every
+    # round either downgrades something or stops.
+    for _ in range(len(checks) + 1):
+        before = {c["id"]: c["status"] for c in checks}
+        for c in checks:
+            apply_rules(c, by_id)
+        if all(c["status"] == before[c["id"]] for c in checks):
+            break
 
     blocking = [c for c in checks if c["status"] == "FAIL" and c["applies"]]
     blocked = [c for c in checks if c["status"] == "BLOCKED" and c["applies"]]

@@ -136,7 +136,7 @@ You stop for exactly three reasons. Each has a required report entry.
 |---|---|---|---|
 | **Verified** | Every applicable criterion is `PASS` with real provenance | `PASS` | The evidence table |
 | **Blocked on the user** | A decision, credential, or access only the user can supply | `BLOCKED` | The specific ask, the options, your recommendation, and what you already ruled out |
-| **Exhausted** | The ladder was climbed at least once, each avenue recorded, and none resolved it | `NOT RUN` for that criterion (never `BLOCKED`, which implies a user ask exists) | Every avenue tried, what each ruled out, and the narrowest remaining unknown |
+| **Exhausted** | The ladder was climbed at least once, each avenue recorded, and none resolved it — and rung 9 was either not reached or was answered | `NOT RUN` for that criterion (never `BLOCKED`, which implies an open user ask) | Every avenue tried, what each ruled out, and the narrowest remaining unknown |
 
 `Exhausted` is a valid outcome and is **not** a failure. What is never valid is
 reporting `PASS` because the loop had to end.
@@ -144,7 +144,9 @@ reporting `PASS` because the loop had to end.
 Map `Exhausted` to `NOT RUN` at the criterion level, not to `BLOCKED`. `BLOCKED`
 means the next move belongs to the user; `Exhausted` means no such move exists,
 and the next engineer must know the difference or they will wait on a decision
-nobody is going to make. If some criteria passed and one is exhausted, the report
+nobody is going to make. The one exception is an unanswered rung-9 question: a
+move *does* exist there, it belongs to the user, and the criterion is `BLOCKED`
+(see "Asked but unanswered" below), never `Exhausted`. If some criteria passed and one is exhausted, the report
 carries `NOT RUN` for that criterion and the overall status follows from the
 precedence rules — usually `NOT RUN` or `PARTIAL`, never `PASS`.
 
