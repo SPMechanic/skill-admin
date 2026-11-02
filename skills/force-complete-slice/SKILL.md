@@ -217,6 +217,22 @@ real gate run in this session. Never carry a prior `PASS` into the report, and
 never let an imported criterion skip verification: a stale pass is the most
 expensive false green there is, because it was once true.
 
+**Hollow slices: design-first, never implement-first.** Before deriving an
+implementation contract, check whether the slice is hollow — presentation
+exists (a mockup, UI shell, prototype) but the domain does not: no backend
+surface, no ports, no persistence behind the UI. A hollow slice must not get
+an implementation contract, because an implement-first agent wires the UI to
+*imagined* ports and the module lands out of sync with the architecture. For
+a hollow slice, derive a **design contract** instead: the acceptance criteria
+become design artifacts — domain ownership stated, required ports and events
+defined, read models named, every unresolved business decision an explicit
+`BLOCKED` criterion owned by the user (a metric formula, a data source) rather
+than filled with a plausible default. Filling an unresolved decision with a
+default is a contract defect even when everything compiles. Implementation
+criteria are only added once the design contract is satisfied and the ports it
+names actually exist. The same rule, applied at scheduling time, lives in
+skill-orchestrator's Hollow class and contract waves.
+
 Then convert the request into numbered acceptance criteria that can each be
 marked verified or not. Fill the layer table from
 [references/completion-contract.md](references/completion-contract.md): every
