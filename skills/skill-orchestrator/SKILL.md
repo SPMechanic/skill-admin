@@ -82,6 +82,21 @@ Before allowing any parallel fan-out, check all 4 axes:
 **ALL 4 must be safe to allow parallel.** Any single failure → Mode C
 (sequential with HITL gate).
 
+### Axis 5 — Prerequisites (slice fan-out)
+
+When the subtasks are implementation slices (modules, features, vertical
+slices) rather than skill invocations, a fifth axis applies before fan-out:
+
+| # | Axis | Safe condition |
+|---|---|---|
+| 5 | Prerequisites | No two slices in the same wave share an unmet prerequisite, and no slice's prerequisite is being built in the same wave |
+
+Axis 5 is evaluated from slice audit artifacts (`<root>/.audit/<slice>/`), not
+from how the code looks. Classification, wave construction, stop conditions,
+and per-slice model pairing are specified in
+[references/dependency-resolution.md](references/dependency-resolution.md).
+Failing axis 5 demotes the wave to Mode C; it does not cancel it.
+
 ## Workflow
 
 ### Step 1 — Identify skills involved
@@ -91,6 +106,15 @@ rather than a pre-structured plan, run `skill-admin:intake` first — intake emi
 plan table and stops at its own gate; orchestration begins only from an approved plan.
 If the caller already provided a structured plan, accept it as-is (pre-structured
 input stays supported).
+
+**Plan-shaped input.** If the request is a prose narrative, a prompt describing
+waves/phases, or a plan file naming multiple modules or slices, do not treat it
+as one task. Parse it into discrete slices, classify each against audit
+artifacts per [references/dependency-resolution.md](references/dependency-resolution.md),
+and present the resulting wave table for approval before any fan-out. A wave
+word like "Phase 2" is a scheduling claim, not evidence of independence —
+the resolver's classification is what decides, and it may contradict the
+narrative's ordering.
 
 ### Step 2 — Classify the pattern
 
@@ -177,6 +201,10 @@ explicitly before continuing.
 - This skill does not install or repair plugins
 - This skill does not write steering files
 - This skill does not execute skills directly — it coordinates
+- This skill does not verify slices — it classifies and orders them
+  ([references/dependency-resolution.md](references/dependency-resolution.md));
+  verification belongs to `force-complete-slice`, which each fanned-out agent
+  runs for its own slice
 
 ## Error handling
 

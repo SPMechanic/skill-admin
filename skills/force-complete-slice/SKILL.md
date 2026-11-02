@@ -127,6 +127,8 @@ a repository other than the one you are in; pass it through to discovery and tre
 it as the report's repository root), `--contract <path>` (seed Step 2 from an
 existing audit or contract document instead of re-deriving criteria; see
 [references/completion-contract.md](references/completion-contract.md)),
+`--audit-dir <path>` (look for a prior contract in this directory instead of the
+default `<root>/.audit/<slice>/`; see Step 2's precedence list),
 `--override-effort "authorized by <user> at <time>"` (lift the attempt budget for
 an explicitly authorized run; see
 [references/escalation-and-persistence.md](references/escalation-and-persistence.md)),
@@ -174,6 +176,27 @@ If `--contract <path>` was passed, or the user points at a prior audit, seed the
 contract from that document instead of re-deriving it. Transcribe its criteria,
 layers, and topology assumptions; fill only genuine gaps. Name the source path
 in the contract so the report shows where the criteria came from.
+
+**Auto-detected prior audits.** Before deriving criteria from scratch, check
+whether a prior contract already exists for this slice, in this order of
+precedence — the first that exists wins, and each later source is skipped:
+
+1. `--contract <path>` — an explicit path always wins.
+2. `<root>/.audit/<slice>/acceptance.tsv` — the convention this skill writes to
+   and other tooling may already populate. `<slice>` is the slice slug: the
+   kebab-case module/feature name, e.g. `.audit/student/acceptance.tsv`.
+3. `<audit-dir>/acceptance.tsv` when `--audit-dir <path>` was passed — for
+   repositories that keep audit artifacts somewhere else.
+4. Nothing found — derive from scratch, and say in the report that no prior
+   contract was found.
+
+A detected `acceptance.tsv` is seeded exactly like an explicit `--contract`: its
+`criterion`, `layer`, and `command` columns become criteria, and every row enters
+`NOT RUN` for re-verification in this session (see the imported-findings rule
+below — an imported `PASS` is a claim, never evidence). Name the detected path
+in the contract. If the directory exists but the file does not, or the file is
+present but has no parsable rows, say so and fall through to the next source —
+a found-but-unusable audit is not evidence of anything.
 
 A prior audit may also be **recalled from a previous session** when the user asks
 for it. Transcripts live under `~/.claude/projects/<project-slug>/*.jsonl`:
