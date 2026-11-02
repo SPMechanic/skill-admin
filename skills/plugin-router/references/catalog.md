@@ -3482,6 +3482,7 @@ Reverse engineer anything with agents, from app behavior down to native binaries
 ## Marketplace: `skill-admin`
 
 ### Plugin: `skill-admin`
+- **Skill** `force-complete-slice` — Drive one software slice to an evidence-backed completion state. Use when the user says "finish this feature end to end", "force complete this", "is this slice done", "complete this module", "what is left before we can ship it", or when a change spans several layers (domain, application, data, API, UI, integration, docs) and completion must be proven rather than assumed. Discovers the project's own commands and gates, writes a completion contract, verifies with real evidence, and reports PASS / PARTIAL / FAIL / BLOCKED / NOT RUN / NOT APPLICABLE with provenance. When blocked it escalates rather than quitting: local evidence, installed capabilities, real execution, external research, minimal reproduction, then an independent verdict from a strongest-model subagent. Does not commit, push, deploy, or touch production unless the user explicitly asks. — *trigger*: "force-complete-slice"
 - **Skill** `intake` — Step 0 Intent Articulation. Consumes one raw user prompt and produces a gated plan table (rows = steps; columns = action, capability, reason, evidence, coordinates, inferred-from) before any routing or execution. Use when the user gives an unstructured or ambiguous request, says "plan this", "route this", "figure out what I need", or when skill-orchestrator Mode C receives a raw prompt instead of a pre-structured plan. This skill does not route, score, or execute — it articulates intent into a checkable plan and stops at the gate. — *trigger*: "intake"
 - **Skill** `marketplace-bootstrapper` — Bootstrap a fresh Claude Code environment with recommended marketplaces, plugins, and configuration. Works on Claude Code CLI and Claude Desktop / Cowork Surface via direct file operations. Use when the user says "set up a new machine", "bootstrap my environment", "fresh install of Claude Code", "set up my dev machine", or "initialize my Claude environment". This skill installs marketplaces and configures settings. It does not audit existing plugins or route tasks. — *trigger*: "marketplace-bootstrapper"
 - **Skill** `marketplace-optimizer` — Audit and score your installed Claude Code plugins and marketplaces across all surfaces (Claude Code CLI, Claude Desktop Cowork/Code, and 3P gateway variants). Use when the user asks to "optimize my marketplace", "check my plugins", "which plugins should I keep/remove", "rate my plugins", "clean up my marketplaces", or wants a health report on installed capabilities. This skill scores every installed plugin against a deterministic reputation rubric (official > community-proven > experimental), detects overlaps and gaps, estimates per-plugin token cost, and produces a prioritized install/remove/disable/upgrade report. It reports — it does not modify, install, remove, or reconfigure. — *trigger*: "marketplace-optimizer"
@@ -3545,6 +3546,6 @@ A collection of skills for Vue.js development.
 ## Totals
 - Marketplaces: 35
 - Plugins: 403
-- Skills: 1499
+- Skills: 1500
 - Commands: 290
 - Agents: 465

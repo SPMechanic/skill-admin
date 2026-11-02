@@ -1364,6 +1364,7 @@ Agent-loadable summary of `catalog.md`. Regenerate with `refresh_catalog.py`.
 - `ux-research` — Plan and execute user research including research planning, recruiting, interview design, qualitative synthesis, and translating findings into product decisions. Use this skill whenever the user wants to plan user resear
 - `vendor-evaluation` — Evaluate, select, and contract with vendors and SaaS tools. Use this skill when comparing alternatives, running an RFP, scoring vendors against criteria, negotiating contracts, planning a switch, or assessing a vendor's 
 - `vertical-site-conventions` — Compose pages and sites that read as their vertical: ecommerce-catalog storefronts that look like storefronts, hospitality-food sites that look like restaurants, b2b-manufacturer sites that look industrial. Use this skil
+- `force-complete-slice` — Drive one software slice to an evidence-backed completion state. Use when the user says "finish this feature end to end", "force complete this", "is this slice done", "complete this module", "what is left before we can s
 - `intake` — Step 0 Intent Articulation. Consumes one raw user prompt and produces a gated plan table (rows = steps; columns = action, capability, reason, evidence, coordinates, inferred-from) before any routing or execution. Use whe
 - `marketplace-bootstrapper` — Bootstrap a fresh Claude Code environment with recommended marketplaces, plugins, and configuration. Works on Claude Code CLI and Claude Desktop / Cowork Surface via direct file operations. Use when the user says "set up
 - `marketplace-optimizer` — Audit and score your installed Claude Code plugins and marketplaces across all surfaces (Claude Code CLI, Claude Desktop Cowork/Code, and 3P gateway variants). Use when the user asks to "optimize my marketplace", "check 
@@ -1399,4 +1400,4 @@ Agent-loadable summary of `catalog.md`. Regenerate with `refresh_catalog.py`.
 - `review-claudemd` — Review recent conversations to find improvements for CLAUDE.md files.
 - `version-check` — Recommend which Claude Code version to run, or whether to update. Use when asked which Claude Code version is best/safe, whether to update now, whether a recent release is buggy, or what changed since the installed versi
 
-_1395 unique skills in catalog_
+_1396 unique skills in catalog_
