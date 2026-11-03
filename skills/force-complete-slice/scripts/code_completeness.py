@@ -69,9 +69,14 @@ def check_layers(root: Path, layers: list[dict]) -> dict:
     ]
     if not layers:
         return {"ok": None, "detail": "no layer manifest — layer presence not checked"}
+    checked = ", ".join(layer.get("name", "?") for layer in layers)
     return {
         "ok": not missing,
-        "detail": "all layers present" if not missing else "missing: " + ", ".join(missing),
+        "detail": (
+            f"all layers present (checked: {checked})"
+            if not missing
+            else f"missing: {', '.join(missing)} (checked: {checked})"
+        ),
     }
 
 

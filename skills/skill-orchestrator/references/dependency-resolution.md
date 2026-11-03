@@ -22,6 +22,13 @@ how the code looks. For a slice slug `<slice>`:
 inputs to resolution, not problems to work around — another tool's state machine
 is authoritative over this skill's guesses.
 
+**When the artifacts are missing**, establish the baseline in order of
+authority: the project's `CLAUDE.md`, then an ADR in `docs/decisions/`, then
+ask the user. Never infer the plan silently — a wrong baseline produces a
+wrong report that looks exactly like a right one. `classify_slices.py` exits
+with an error when `slices.json` is absent; that error means "go find the
+baseline by hand," not "guess."
+
 ## Classification
 
 For each slice the plan needs, classify from artifacts only:
@@ -189,6 +196,11 @@ It classifies each slice from `.audit/<slice>/acceptance.tsv` — every row
 builds waves from inter-slice `depends_on` edges, where a cycle is an error and
 the topological order is the wave order. Classification is where a scheduling
 decision is most likely to be mistaken for evidence, so it is done mechanically.
+
+The ordering is cheapest-first on purpose: the file-inspection tier runs before
+anything that executes code, because it catches most scheduling errors for the
+least effort — and a wrong edge *enables* every downstream mistake built on top
+of it, which is why it is checked before anything else.
 
 Three judgments stay prose, in this document, read by a person:
 
