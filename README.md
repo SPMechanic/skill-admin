@@ -32,6 +32,18 @@ Multi-surface plugin and skill administration. Works on Claude Code CLI and Clau
 
 See [docs/surfaces.md](docs/surfaces.md) for the full multi-surface execution path matrix.
 
+## Activity ledger
+
+The plugin ships a PostToolUse/PreToolUse hook pair that records every
+`skills/*/scripts/` invocation to `<project>/.audit/activity.jsonl` — one
+JSON line per completed run: timestamp, skill, script, full command, exit
+code, and wall duration (Pre/Post events paired by `tool_use_id`).
+Non-skill commands are never logged; a missing pair logs with
+`duration_ms: null` rather than being dropped. The ledger is executed
+evidence: what the plugin actually ran, independent of what was narrated.
+`.audit/` is gitignored — the ledger is a local audit trail, not repo
+content.
+
 ## Design principles
 
 See [CLAUDE.md](CLAUDE.md) for the design principles and repo structure that Claude uses when working in this repository.
