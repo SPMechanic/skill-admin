@@ -27,6 +27,7 @@ Multi-surface plugin and skill administration. Works on Claude Code CLI and Clau
 | `skill-orchestrator` | Executor | Sequence skills with safety gates — never routes or installs directly |
 | `marketplace-bootstrapper` | Executor | Fresh-machine setup with curated install profiles |
 | `force-complete-slice` | Executor | Drive one slice to an evidence-backed completion state — discovers the project's own gates, writes a completion contract, escalates through research and strong-model delegation when blocked, reports `PASS` / `PARTIAL` / `BLOCKED` / `NOT RUN` with provenance |
+| `run-report` | Report-only | Render the activity ledger as a run report — per-session text tree or interactive HTML with durations, exit codes, and drill-down into each command |
 
 ## Surface compatibility
 
@@ -42,7 +43,8 @@ Non-skill commands are never logged; a missing pair logs with
 `duration_ms: null` rather than being dropped. The ledger is executed
 evidence: what the plugin actually ran, independent of what was narrated.
 `.audit/` is gitignored — the ledger is a local audit trail, not repo
-content.
+content. `run-report` renders the ledger: text tree on any surface,
+`--html` for the interactive drill-down view.
 
 ## Design principles
 

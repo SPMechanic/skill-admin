@@ -20,6 +20,7 @@
     "./skills/plugin-manager",
     "./skills/plugin-router",
     "./skills/project-atlas",
+    "./skills/run-report",
     "./skills/skill-orchestrator",
     "./skills/steering-writer"
   ],
