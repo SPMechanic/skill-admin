@@ -29,6 +29,18 @@ approval through the normal HITL gates.
 | Claude Desktop (Code) | Read `~/.claude/plugins/installed_plugins.json` + `~/.claude/settings.json` directly |
 | 3P CLI/Desktop (3rd-party gateway) | Same as the matching official surface |
 
+
+### Step visibility
+
+On start, materialize this skill's step sequence as a task list through the
+surface's task tool — `TodoWrite` in Claude Code CLI, the plan widget on
+Desktop — before the first action. Advance exactly one entry per step
+transition; a list that jumps from all-pending to all-done is a progress
+false-green, the same defect as an unexecuted `PASS`. On a surface with no
+task tool, print a compact markdown checklist at each phase boundary instead.
+Narrate each step boundary in one sentence: what is about to be read or run,
+then what it returned.
+
 ## What this skill does
 
 | Action | Scope |

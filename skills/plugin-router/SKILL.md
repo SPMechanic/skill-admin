@@ -29,6 +29,18 @@ tables below.
 | Claude Desktop (Code) | Read `installed_plugins.json` directly |
 | 3P CLI/Desktop | Same as official surface |
 
+
+### Step visibility
+
+On start, materialize this skill's step sequence as a task list through the
+surface's task tool — `TodoWrite` in Claude Code CLI, the plan widget on
+Desktop — before the first action. Advance exactly one entry per step
+transition; a list that jumps from all-pending to all-done is a progress
+false-green, the same defect as an unexecuted `PASS`. On a surface with no
+task tool, print a compact markdown checklist at each phase boundary instead.
+Narrate each step boundary in one sentence: what is about to be read or run,
+then what it returned.
+
 ## When to invoke
 
 Activate plugin-router **only** for development work or explicit routing questions.
