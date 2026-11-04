@@ -33,8 +33,12 @@ Desktop — before the first action. Advance exactly one entry per step
 transition; a list that jumps from all-pending to all-done is a progress
 false-green, the same defect as an unexecuted `PASS`. On a surface with no
 task tool, print a compact markdown checklist at each phase boundary instead.
-Narrate each step boundary in one sentence: what is about to be read or run,
-then what it returned.
+Narrate each boundary with facts, not progress phrases. Before an action,
+name the artifact — `slices.json`, `recommend.py --json`, never "the file".
+After it, state the result: counts, exit code, verdict, key finding.
+"Progressing...", "executing read on...", and any line that could describe
+any project are noise. A boundary line passes only if the user can follow
+the run without expanding the tool call.
 
 ## What this skill does
 
